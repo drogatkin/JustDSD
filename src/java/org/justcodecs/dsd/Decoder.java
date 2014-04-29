@@ -21,7 +21,13 @@ public class Decoder {
 			throw new IllegalArgumentException("Not initialized yet or invalid");
 		if (pcmf == null) {
 			pcmf = new PCMFormat();
-			// TODO convert ot PCM
+			switch(fmt.sampleFreq) {
+			case 5644800:
+				pcmf.bytesPerSample = 32;
+				pcmf.sampleRate = 5644800 / 32;
+				pcmf.channels = fmt.channelNum;
+			}
+			// TODO convert to PCM
 		}
 		return pcmf;
 	}
