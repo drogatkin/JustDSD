@@ -2,9 +2,10 @@ package org.justcodecs.dsd;
 
 public class Decoder {
 	public static class PCMFormat {
-		public int bytesPerSample;
+		public int bitsPerSample;
 		public int sampleRate;
 		public int channels;
+		public boolean lsb;
 	}
 	
 	public static class DecodeException extends Exception {
@@ -23,11 +24,11 @@ public class Decoder {
 			pcmf = new PCMFormat();
 			switch(fmt.sampleFreq) {
 			case 5644800:
-				pcmf.bytesPerSample = 32;
+				pcmf.bitsPerSample = 32;
 				pcmf.sampleRate = 5644800 / 32;
 				pcmf.channels = fmt.channelNum;
+				pcmf.lsb = fmt.bitPerSample == 1;
 			}
-			// TODO convert to PCM
 		}
 		return pcmf;
 	}
