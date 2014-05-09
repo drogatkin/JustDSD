@@ -35,13 +35,17 @@ public class Player {
 	public void play(String f) throws Decoder.DecodeException {
 		Decoder decoder = new Decoder();
 		try {
-			decoder.init(new Utils.RandomDSDStream(new File(f)));
-			PCMFormat pcmf = decoder.getPCMFormat();
-			AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, false, pcmf.lsb);
+			PCMFormat pcmf = new PCMFormat();
+			pcmf.sampleRate = 44100*2;
+			pcmf.bitsPerSample = 16;
+			pcmf.channels = 2;
+			AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
 			SourceDataLine dl = AudioSystem.getSourceDataLine(af);
+			decoder.setPCMFormat(pcmf);
+			decoder.init(new Utils.RandomDSDStream(new File(f)));
 			dl.open();
 			dl.start();
-			byte[][] samples = new byte[pcmf.channels][2048];
+			int[][] samples = new int[pcmf.channels][2048];
 			int channels = (pcmf.channels > 2 ? 2 : pcmf.channels);
 			int bytesChannelSample = pcmf.bitsPerSample / 8;
 			int bytesSample = channels * bytesChannelSample;
@@ -50,13 +54,14 @@ public class Player {
 				int nsampl = decoder.decodePCM(samples);
 				if (nsampl <= 0)
 					break;
+				int bp = 0;
 				for (int s = 0; s < nsampl; s++) {
 					for (int c = 0; c < channels; c++) {
 						for (int b = 0; b < bytesChannelSample; b++)
-							playBuffer[s * bytesSample + b] = samples[c][s * bytesChannelSample + b];
+							playBuffer[bp++] = (byte) ((samples[c][s]>>(b*8)) & 255);
 					}
 				}
-				dl.write(playBuffer, 0, nsampl * bytesSample);
+				dl.write(playBuffer, 0, bp);
 			} while (true);
 			dl.stop();
 			dl.close();

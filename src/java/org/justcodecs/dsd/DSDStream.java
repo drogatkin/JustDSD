@@ -13,4 +13,8 @@ public interface DSDStream {
 	public int readInt(boolean lsb) throws IOException;
 
 	long length() throws IOException;
+	
+	long getFilePointer() throws IOException;
+	
+	void seek(long pointer) throws IOException;
 }
