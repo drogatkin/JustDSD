@@ -129,16 +129,19 @@ public class Decoder implements Filters {
 		// get the sample buffer
 		readDataBlock();
 		byte buff[][] = dc.data;
+		int bufPos = 0;
 		for (int i=0; i<slen ; i++) {
 			// filter each chan in turn
 			for (int c=0; c<fmt.channelNum; c++) {
 				double sum = 0.0;
 				for (int t=0, nLookupTable=lookupTable.length; t<nLookupTable; t++) {
-					int byt = buff[c][t] & 0xFF;
+					int byt = buff[c][bufPos+t] & 0xFF;
 					sum += lookupTable[t][byt];
+					//bufPos++;
 				}
 				sum = sum*scale;
-				
+				if (c==0 && false)
+				System.out.printf(" %f%n", sum);
 				// dither before rounding/truncating
 				if (tpdfDitherPeakAmplitude > 0) {
 					// TPDF dither
@@ -160,14 +163,17 @@ public class Decoder implements Filters {
 			}
 			// step the buffer
 			//System.out.printf("Skipping %d%n", nStep);
-			for (int m=0; m<nStep; m++)
+			bufPos += nStep;
+			if (bufPos + lookupTable.length > buff[0].length) {			
 				readDataBlock();
+				bufPos = 0;
+			}
 		}
 		return slen;
 	}
 
 	public int decodePCM(int[]... channels) throws DecodeException {
 		// 16 bits 96 db
-		return getSamples1(Math.pow(10.0,96/20)*Math.pow(2.0,16-1), 0, 0, channels);
+		return getSamples1(0x7fff/*Math.pow(10.0,96/20)*Math.pow(2.0,16-1)*/, 0, 0, channels);
 	}
 }
