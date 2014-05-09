@@ -27,6 +27,7 @@ public class Decoder implements Filters {
 
 	double[][] lookupTable;
 	Random rnd;
+	int bufPos = -1;
 
 	public void setPCMFormat(PCMFormat f) {
 		pcmf = f;
@@ -127,8 +128,11 @@ public class Decoder implements Filters {
 		boolean clip = clipAmplitude > 0;
 		int nStep = ratio/8;
 		// get the sample buffer
-		readDataBlock();
 		byte buff[][] = dc.data;
+		if (bufPos < 0 || bufPos + lookupTable.length > buff[0].length) {			
+			readDataBlock();
+			bufPos = 0;
+		}
 		int bufPos = 0;
 		for (int i=0; i<slen ; i++) {
 			// filter each chan in turn
@@ -174,6 +178,6 @@ public class Decoder implements Filters {
 
 	public int decodePCM(int[]... channels) throws DecodeException {
 		// 16 bits 96 db
-		return getSamples1(0x7fff/*Math.pow(10.0,96/20)*Math.pow(2.0,16-1)*/, 0, 0, channels);
+		return getSamples1(0x7fff/*Math.pow(10.0,96/20)*Math.pow(2.0,16-1)*/, 0, 0x7fff, channels);
 	}
 }
