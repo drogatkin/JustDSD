@@ -60,6 +60,7 @@ public class Decoder implements Filters {
 	}
 	
 	void readDataBlock() throws DecodeException {
+		//System.out.printf("read block%n");
 		for(int c=0; c<fmt.channelNum; c++)
 			try {
 				dsdStream.readFully(dc.data[c], 0, dc.data[c].length);
@@ -137,6 +138,7 @@ public class Decoder implements Filters {
 					sum += lookupTable[t][byt];
 				}
 				sum = sum*scale;
+				
 				// dither before rounding/truncating
 				if (tpdfDitherPeakAmplitude > 0) {
 					// TPDF dither
@@ -157,6 +159,7 @@ public class Decoder implements Filters {
 					samplesFloat[c][i] = (sum);
 			}
 			// step the buffer
+			//System.out.printf("Skipping %d%n", nStep);
 			for (int m=0; m<nStep; m++)
 				readDataBlock();
 		}
@@ -164,6 +167,7 @@ public class Decoder implements Filters {
 	}
 
 	public int decodePCM(int[]... channels) throws DecodeException {
-		return getSamples1(1, 0, 0, channels);
+		// 16 bits 96 db
+		return getSamples1(Math.pow(10.0,96/20)*Math.pow(2.0,16-1), 0, 0, channels);
 	}
 }

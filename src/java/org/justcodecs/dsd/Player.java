@@ -36,7 +36,7 @@ public class Player {
 		Decoder decoder = new Decoder();
 		try {
 			PCMFormat pcmf = new PCMFormat();
-			pcmf.sampleRate = 44100*2;
+			pcmf.sampleRate = 44100*2*2;
 			pcmf.bitsPerSample = 16;
 			pcmf.channels = 2;
 			AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
@@ -49,7 +49,7 @@ public class Player {
 			int channels = (pcmf.channels > 2 ? 2 : pcmf.channels);
 			int bytesChannelSample = pcmf.bitsPerSample / 8;
 			int bytesSample = channels * bytesChannelSample;
-			byte[] playBuffer = new byte[channels * 2048];
+			byte[] playBuffer = new byte[channels * 2048 * 2];
 			do {
 				int nsampl = decoder.decodePCM(samples);
 				if (nsampl <= 0)
@@ -57,10 +57,13 @@ public class Player {
 				int bp = 0;
 				for (int s = 0; s < nsampl; s++) {
 					for (int c = 0; c < channels; c++) {
+						//System.out.printf("%x", samples[c][s]);
 						for (int b = 0; b < bytesChannelSample; b++)
 							playBuffer[bp++] = (byte) ((samples[c][s]>>(b*8)) & 255);
 					}
 				}
+				//for (int k=0;k<bp; k++)
+					//System.out.printf("%x", playBuffer[k]);
 				dl.write(playBuffer, 0, bp);
 			} while (true);
 			dl.stop();
