@@ -10,6 +10,7 @@ public class DATAChunk {
 	public long chunkSize;
 	long dataStart, dataEnd;
 	byte[][] data;
+	int bufPos = -1;
 	protected DATAChunk(DSDStream ds) throws DecodeException {
 		try {
 		if (ds.readInt(true) != signature)

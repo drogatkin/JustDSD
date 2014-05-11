@@ -27,7 +27,6 @@ public class Decoder implements Filters {
 
 	double[][] lookupTable;
 	Random rnd;
-	int bufPos = -1;
 
 	public void setPCMFormat(PCMFormat f) {
 		pcmf = f;
@@ -86,7 +85,7 @@ public class Decoder implements Filters {
 				double acc = 0.0;
 				for (int bit = 0; bit < k; bit++) {
 					double val;
-					if (fmt.bitPerSample == 8) {
+					if (fmt.bitPerSample == 8) { // msb
 						val = (dsdSeq & (1 << (7 - bit))) != 0 ? 1.0 : -1.0;
 					} else {
 						val = (dsdSeq & (1 << (bit))) != 0 ? 1.0 : -1.0;
@@ -129,19 +128,17 @@ public class Decoder implements Filters {
 		int nStep = ratio/8;
 		// get the sample buffer
 		byte buff[][] = dc.data;
-		if (bufPos < 0 || bufPos + lookupTable.length > buff[0].length) {			
+		if (dc.bufPos < 0 || dc.bufPos + lookupTable.length > buff[0].length) {			
 			readDataBlock();
-			bufPos = 0;
+			dc.bufPos = 0;
 		}
-		int bufPos = 0;
 		for (int i=0; i<slen ; i++) {
 			// filter each chan in turn
 			for (int c=0; c<fmt.channelNum; c++) {
 				double sum = 0.0;
 				for (int t=0, nLookupTable=lookupTable.length; t<nLookupTable; t++) {
-					int byt = buff[c][bufPos+t] & 0xFF;
+					int byt = buff[c][dc.bufPos+t] & 0xFF;
 					sum += lookupTable[t][byt];
-					//bufPos++;
 				}
 				sum = sum*scale;
 				if (c==0 && false)
@@ -167,10 +164,10 @@ public class Decoder implements Filters {
 			}
 			// step the buffer
 			//System.out.printf("Skipping %d%n", nStep);
-			bufPos += nStep;
-			if (bufPos + lookupTable.length > buff[0].length) {			
+			dc.bufPos += nStep;
+			if (dc.bufPos + lookupTable.length > buff[0].length) {			
 				readDataBlock();
-				bufPos = 0;
+				dc.bufPos = 0;
 			}
 		}
 		return slen;
