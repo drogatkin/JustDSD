@@ -11,6 +11,7 @@ public class DATAChunk {
 	long dataStart, dataEnd;
 	byte[][] data;
 	int bufPos = -1;
+	int bufEnd;
 	protected DATAChunk(DSDStream ds) throws DecodeException {
 		try {
 		if (ds.readInt(true) != signature)

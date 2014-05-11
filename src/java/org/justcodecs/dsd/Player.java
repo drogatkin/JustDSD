@@ -34,9 +34,10 @@ public class Player {
 
 	public void play(String f) throws Decoder.DecodeException {
 		Decoder decoder = new Decoder();
+		long sampleCount = 0;
 		try {
 			PCMFormat pcmf = new PCMFormat();
-			pcmf.sampleRate = 44100*2*2;
+			pcmf.sampleRate = 44100 * 2 * 2;
 			pcmf.bitsPerSample = 16;
 			pcmf.channels = 2;
 			AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
@@ -59,12 +60,13 @@ public class Player {
 					for (int c = 0; c < channels; c++) {
 						//System.out.printf("%x", samples[c][s]);
 						for (int b = 0; b < bytesChannelSample; b++)
-							playBuffer[bp++] = (byte) ((samples[c][s]>>(b*8)) & 255);
+							playBuffer[bp++] = (byte) ((samples[c][s] >> (b * 8)) & 255);
 					}
 				}
 				//for (int k=0;k<bp; k++)
-					//System.out.printf("%x", playBuffer[k]);
+				//System.out.printf("%x", playBuffer[k]);
 				dl.write(playBuffer, 0, bp);
+				sampleCount += nsampl;
 			} while (true);
 			dl.stop();
 			dl.close();
@@ -73,7 +75,7 @@ public class Player {
 		} catch (LineUnavailableException e) {
 			throw new Decoder.DecodeException("Can't play this format", e);
 		}
-
+		System.out.printf("Toal samples: %d%n", sampleCount);
 	}
 
 }
