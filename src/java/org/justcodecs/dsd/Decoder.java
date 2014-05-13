@@ -29,8 +29,13 @@ public class Decoder implements Filters {
 	double[][] lookupTable;
 	Random rnd;
 
-	public void setPCMFormat(PCMFormat f) {
+	public void setPCMFormat(PCMFormat f) throws DecodeException {
+		if (dc == null)
+			throw new DecodeException("Target PCM format has to be set after calling init", null);
 		pcmf = f;
+		initLookupTable();
+		rnd = new Random();
+		dc.data = new byte[fmt.channelNum][fmt.blockSize + lookupTable.length];
 	}
 
 	public void init(DSDStream ds) throws DecodeException {
@@ -39,12 +44,27 @@ public class Decoder implements Filters {
 		fmt = FMTChunk.read(dsdStream);
 		System.out.printf("FMT:%s%n", fmt);
 		dc = DATAChunk.read(dsdStream);
-		//System.out.printf("DATA:%s%n", dc);
-		if (pcmf == null)
-			throw new DecodeException("Target PCM format has to be set before calling init", null);
-		initLookupTable();
-		rnd = new Random();
-		dc.data = new byte[fmt.channelNum][fmt.blockSize+lookupTable.length];
+		//System.out.printf("DATA:%s%n", dc);		
+	}
+	
+	public long getSampleRate() {
+		if (fmt != null)
+			return fmt.sampleFreq;
+		return 0;
+	}
+	
+	public long getSampleCount() {
+		if (fmt != null)
+			return fmt.sampleCount;
+		return 0;
+	}
+
+	public void dispose() {
+		try {
+			dsdStream.close();
+		} catch (IOException e) {
+			
+		}
 	}
 
 	protected void initLookupTable() throws DecodeException {
@@ -72,14 +92,14 @@ public class Decoder implements Filters {
 				return false;
 			if (dc.bufPos < 0)
 				dc.bufPos = 0;
-			int delta = dc.bufEnd-dc.bufPos;
+			int delta = dc.bufEnd - dc.bufPos;
 			for (int c = 0; c < fmt.channelNum; c++) {
-				if(delta > 0) 
+				if (delta > 0)
 					System.arraycopy(dc.data[c], dc.bufPos, dc.data[c], 0, delta);
 				dsdStream.readFully(dc.data[c], delta, fmt.blockSize);
 			}
 			dc.bufPos = 0;
-			dc.bufEnd = fmt.blockSize+delta;
+			dc.bufEnd = fmt.blockSize + delta;
 		} catch (IOException e) {
 			throw new DecodeException("IO exception at reading samples", e);
 		}

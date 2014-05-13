@@ -35,7 +35,8 @@ public class Player {
 	public void play(String f) throws Decoder.DecodeException {
 		Decoder decoder = new Decoder();
 		long sampleCount = 0;
-		try {
+		try {			
+			decoder.init(new Utils.RandomDSDStream(new File(f)));
 			PCMFormat pcmf = new PCMFormat();
 			pcmf.sampleRate = 44100 * 2 * 2;
 			pcmf.bitsPerSample = 16;
@@ -43,7 +44,6 @@ public class Player {
 			AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
 			SourceDataLine dl = AudioSystem.getSourceDataLine(af);
 			decoder.setPCMFormat(pcmf);
-			decoder.init(new Utils.RandomDSDStream(new File(f)));
 			dl.open();
 			dl.start();
 			int[][] samples = new int[pcmf.channels][2048];
@@ -75,6 +75,7 @@ public class Player {
 		} catch (LineUnavailableException e) {
 			throw new Decoder.DecodeException("Can't play this format", e);
 		}
+		decoder.dispose();
 		System.out.printf("Toal samples: %d%n", sampleCount);
 	}
 

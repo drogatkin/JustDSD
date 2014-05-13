@@ -17,4 +17,6 @@ public interface DSDStream {
 	long getFilePointer() throws IOException;
 	
 	void seek(long pointer) throws IOException;
+	
+	void close()throws IOException;
 }
