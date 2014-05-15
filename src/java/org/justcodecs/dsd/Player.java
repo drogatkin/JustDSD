@@ -35,8 +35,14 @@ public class Player {
 	public void play(String f) throws Decoder.DecodeException {
 		Decoder decoder = new Decoder();
 		long sampleCount = 0;
-		try {			
-			decoder.init(new Utils.RandomDSDStream(new File(f)));
+		try {
+			DSDFormat dsd;
+			if (f.endsWith(".dsf")) {
+				dsd = new DSFFormat();
+			} else
+				dsd = new DFFFormat();
+			dsd.init(new Utils.RandomDSDStream(new File(f)));
+			decoder.init(dsd);
 			PCMFormat pcmf = new PCMFormat();
 			pcmf.sampleRate = 44100 * 2 * 2;
 			pcmf.bitsPerSample = 16;

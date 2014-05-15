@@ -68,5 +68,13 @@ public class Utils {
 					+ (buf[0] & 255);
 		}
 
+		@Override
+		public short readShort(boolean lsb) throws IOException {
+			if (lsb)
+				return readShort();
+			readFully(buf, 0, 2);
+			return (short) (((short) (buf[1] & 255) << 8) + (buf[0] & 255));
+		}
+
 	}
 }

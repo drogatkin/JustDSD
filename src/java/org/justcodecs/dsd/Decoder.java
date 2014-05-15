@@ -18,11 +18,8 @@ public class Decoder implements Filters {
 		}
 	}
 
-	protected FMTChunk fmt;
 	protected PCMFormat pcmf;
-	protected DATAChunk dc;
-	protected DSDStream dsdStream;
-
+	protected DSDFormat dsdf;
 	//protected long currentSample;
 	protected int ratio;
 
@@ -30,45 +27,34 @@ public class Decoder implements Filters {
 	Random rnd;
 
 	public void setPCMFormat(PCMFormat f) throws DecodeException {
-		if (dc == null)
+		if (dsdf == null)
 			throw new DecodeException("Target PCM format has to be set after calling init", null);
 		pcmf = f;
-		initLookupTable();
+	ratio = getSampleRate() % pcmf.sampleRate;
+	if (ratio != 0)
+		throw new DecodeException("PCM sample rate doesn't multiplies 44100", null); 
+	ratio = getSampleRate() / pcmf.sampleRate;	
+	dsdf.initBuffers(initLookupTable());
 		rnd = new Random();
-		dc.data = new byte[fmt.channelNum][fmt.blockSize + lookupTable.length];
 	}
 
-	public void init(DSDStream ds) throws DecodeException {
-		dsdStream = ds;
-		DSDChunk.read(dsdStream);
-		fmt = FMTChunk.read(dsdStream);
-		System.out.printf("FMT:%s%n", fmt);
-		dc = DATAChunk.read(dsdStream);
-		//System.out.printf("DATA:%s%n", dc);		
+	public void init(DSDFormat f) throws DecodeException {
+		dsdf = f;
 	}
 	
-	public long getSampleRate() {
-		if (fmt != null)
-			return fmt.sampleFreq;
-		return 0;
+	public int getSampleRate() {
+		return dsdf.getSampleRate();
 	}
 	
 	public long getSampleCount() {
-		if (fmt != null)
-			return fmt.sampleCount;
-		return 0;
+		return dsdf.getSampleCount();
 	}
 
 	public void dispose() {
-		try {
-			dsdStream.close();
-		} catch (IOException e) {
-			
-		}
+			dsdf.close();
 	}
 
-	protected void initLookupTable() throws DecodeException {
-		ratio = fmt.sampleFreq / pcmf.sampleRate;
+	protected int initLookupTable() throws DecodeException {
 		switch (ratio) {
 		case 8:
 			initLookupTable(coefs_352, tzero_352);
@@ -82,28 +68,7 @@ public class Decoder implements Filters {
 		default:
 			throw new DecodeException("Incompatible sample rate combination " + ratio, null);
 		}
-
-	}
-
-	boolean readDataBlock() throws DecodeException {
-		//System.out.printf("read block%n");
-		try {
-			if (dsdStream.getFilePointer() >= dc.dataEnd)
-				return false;
-			if (dc.bufPos < 0)
-				dc.bufPos = 0;
-			int delta = dc.bufEnd - dc.bufPos;
-			for (int c = 0; c < fmt.channelNum; c++) {
-				if (delta > 0)
-					System.arraycopy(dc.data[c], dc.bufPos, dc.data[c], 0, delta);
-				dsdStream.readFully(dc.data[c], delta, fmt.blockSize);
-			}
-			dc.bufPos = 0;
-			dc.bufEnd = fmt.blockSize + delta;
-		} catch (IOException e) {
-			throw new DecodeException("IO exception at reading samples", e);
-		}
-		return true;
+return lookupTable.length;
 	}
 
 	// TODO why it can't be pre-populated without this exercise?
@@ -122,7 +87,7 @@ public class Decoder implements Filters {
 				double acc = 0.0;
 				for (int bit = 0; bit < k; bit++) {
 					double val;
-					if (fmt.bitPerSample == 8) { // msb
+					if (dsdf.isMSB()) { // msb
 						val = (dsdSeq & (1 << (7 - bit))) != 0 ? 1.0 : -1.0;
 					} else {
 						val = (dsdSeq & (1 << (bit))) != 0 ? 1.0 : -1.0;
@@ -160,24 +125,25 @@ public class Decoder implements Filters {
 		} else
 			throw new DecodeException("Unsupported type of samples buffer", null);
 
-		if (nsc < fmt.channelNum)
+		if (nsc < dsdf.getNumChannels())
 			throw new DecodeException("Allocated sample buffers less than number of channels", null);
-
+		nsc = dsdf.getNumChannels();
 		// flag if we need to clip
 		boolean clip = clipAmplitude > 0;
 		int nStep = ratio / 8;
 		// get the sample buffer
-		byte buff[][] = dc.data;
-		if (dc.bufPos < 0 || dc.bufPos + lookupTable.length > dc.bufEnd) {
-			if (readDataBlock() == false)
+		byte buff[][] = dsdf.getSamples();
+		boolean ils = true;
+		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTable.length*(ils?nsc:1) > dsdf.bufEnd) {
+			if (dsdf.readDataBlock() == false)
 				return -1;
 		}
 		for (int i = 0; i < slen; i++) {
 			// filter each chan in turn
-			for (int c = 0; c < fmt.channelNum; c++) {
+			for (int c = 0; c < nsc; c++) {
 				double sum = 0.0;
 				for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
-					int byt = buff[c][dc.bufPos + t] & 0xFF;
+					int byt = ils?buff[0][dsdf.bufPos+t*nsc+c] &255:buff[c][dsdf.bufPos + t] & 0xFF;
 					sum += lookupTable[t][byt];
 				}
 				sum = sum * scale;
@@ -207,11 +173,10 @@ public class Decoder implements Filters {
 			//currentSample++;
 			//if (currentSample >= fmt.sampleCount)
 			//return i;
-			dc.bufPos += nStep;
-			if (dc.bufPos + lookupTable.length > dc.bufEnd) {
-				if (readDataBlock() == false)
-					return i;
-				dc.bufPos = 0;
+			dsdf.bufPos += nStep*(ils?nsc:1);
+			if (dsdf.bufPos + lookupTable.length*(ils?nsc:1) > dsdf.bufEnd) {
+				if (dsdf.readDataBlock() == false)
+					return i; // was zeroing start
 			}
 		}
 		return slen;
