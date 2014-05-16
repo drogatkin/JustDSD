@@ -1,17 +1,20 @@
 package org.justcodecs.dsd;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
 public abstract class DSDFormat<B> {
 	protected DSDStream dsdStream;
+	protected HashMap<String, Object> attrs;
 
 	int bufPos = -1;
 	int bufEnd;
 	
 	public void init(DSDStream ds) throws DecodeException {
 		dsdStream = ds;
+		attrs = new HashMap<String,Object>();
 	}
 
 	abstract boolean readDataBlock() throws DecodeException;	
@@ -33,5 +36,18 @@ public abstract class DSDFormat<B> {
 
 		}
 	}
+	
+	public Object getMetadata(String key) {
+		if (attrs == null)
+			return null;
+		return attrs.get(key);
+	}
+
+	@Override
+	public String toString() {
+		return "DSDFormat [attrs=" + attrs + ", rate=" + getSampleRate() +", channels=" + getNumChannels() + "]";
+	}
+	
+	//protected void setMetadata(String)
 
 }

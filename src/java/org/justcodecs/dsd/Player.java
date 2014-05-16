@@ -43,6 +43,7 @@ public class Player {
 				dsd = new DFFFormat();
 			dsd.init(new Utils.RandomDSDStream(new File(f)));
 			decoder.init(dsd);
+			System.out.printf("Playing ... %s%n", dsd);
 			PCMFormat pcmf = new PCMFormat();
 			pcmf.sampleRate = 44100 * 2 * 2;
 			pcmf.bitsPerSample = 16;

@@ -6,6 +6,10 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 
 public class ChunkFRM8 extends BaseChunk {
 	ChunkPROP props;
+	String artist;
+	String title;
+	String album ;
+	
 	@Override
 	void read(DSDStream ds) throws DecodeException {
 		super.read(ds);

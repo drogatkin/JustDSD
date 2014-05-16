@@ -18,6 +18,9 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			throw new DecodeException("Invalid diff format, no FRAME chunk", null);
 		//c.skip(dsdStream);
 		frm = (ChunkFRM8) c;
+		attrs.put("Artist", frm.artist);
+		attrs.put("Title", frm.title);
+		attrs.put("Album", frm.album);
 	}
 
 	@Override
