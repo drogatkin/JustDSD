@@ -201,7 +201,8 @@ return lookupTable.length;
 	}
 
 	public int decodePCM(int[]... channels) throws DecodeException {
-		// 16 bits 96 db
-		return getSamples1(0x7fff/*Math.pow(10.0,96/20)*Math.pow(2.0,16-1)*/, 0, 0x7fff, channels);
+		// 16 bits 96 db Math.pow(10.0,96/20)*Math.pow(2.0,16-1)
+		int scale = (1<<(pcmf.bitsPerSample)) -2;
+		return getSamples1(scale, 0, scale, channels);
 	}
 }

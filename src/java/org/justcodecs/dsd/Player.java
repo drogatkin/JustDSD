@@ -83,7 +83,7 @@ public class Player {
 			throw new Decoder.DecodeException("Can't play this format", e);
 		}
 		decoder.dispose();
-		System.out.printf("Toal samples: %d%n", sampleCount);
+		System.out.printf("Total samples: %d%n", sampleCount);
 	}
 
 }
