@@ -4,15 +4,16 @@ import java.io.IOException;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
-public class DFFFormat extends DSDFormat {
+public class DFFFormat extends DSDFormat<byte[]> {
 	ChunkFRM8 frm;
-	byte buff[][] = new byte[1][];
+	byte buff[];
 	static final int block = 2048;
 
 	@Override
+	public
 	void init(DSDStream ds) throws DecodeException {
 		super.init(ds);
-		BaseChunk c = BaseChunk.create(dsdStream);
+		BaseChunk c = BaseChunk.create(dsdStream, null);
 		if (c instanceof ChunkFRM8 == false)
 			throw new DecodeException("Invalid diff format, no FRAME chunk", null);
 		//c.skip(dsdStream);
@@ -29,11 +30,13 @@ public class DFFFormat extends DSDFormat {
 			int delta = bufEnd - bufPos;
 
 			if (delta > 0)
-				System.arraycopy(buff[0], bufPos, buff[0], 0, delta);
-			dsdStream.readFully(buff[0], delta, block * getNumChannels());
-
+				System.arraycopy(buff, bufPos, buff, 0, delta);
+			int toRead = block * getNumChannels();
+			if (toRead > frm.props.dsd.dataEnd - dsdStream.getFilePointer())
+				toRead = (int) (frm.props.dsd.dataEnd - dsdStream.getFilePointer());
+			dsdStream.readFully(buff, delta, toRead);
 			bufPos = 0;
-			bufEnd = block * getNumChannels() + delta;
+			bufEnd = toRead + delta;
 		} catch (IOException e) {
 			throw new DecodeException("IO exception at reading samples", e);
 		}
@@ -47,8 +50,7 @@ public class DFFFormat extends DSDFormat {
 
 	@Override
 	public long getSampleCount() {
-		// TODO Auto-generated method stub
-		return 0;
+		return (frm.props.dsd.dataEnd - frm.props.dsd.start) * (8 / getNumChannels());
 	}
 
 	@Override
@@ -58,18 +60,28 @@ public class DFFFormat extends DSDFormat {
 
 	@Override
 	void initBuffers(int overrun) {
-		buff[0] = new byte[(block + overrun) * getNumChannels()];
-
+		buff = new byte[(block + overrun) * getNumChannels()];
 	}
 
 	@Override
 	boolean isMSB() {
-		return false;
+		return true;
 	}
 
 	@Override
-	byte[][] getSamples() {
+	byte[] getSamples() {
 		return buff;
+	}
+
+	@Override
+	void seek(long sampleNum) throws DecodeException {
+		try {
+			dsdStream.seek(frm.props.dsd.start + (sampleNum / 8)*getNumChannels());
+			//System.out.printf("Satrt play %d for sample %d%n", dsdStream.getFilePointer(), sampleNum);
+			bufPos = -1;
+		} catch (IOException e) {
+			throw new DecodeException("", e);
+		}
 	}
 
 }

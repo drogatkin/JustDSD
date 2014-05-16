@@ -57,6 +57,7 @@ public class Player {
 			int bytesChannelSample = pcmf.bitsPerSample / 8;
 			int bytesSample = channels * bytesChannelSample;
 			byte[] playBuffer = new byte[bytesSample * 2048];
+			decoder.seek(0);
 			do {
 				int nsampl = decoder.decodePCM(samples);
 				if (nsampl <= 0)

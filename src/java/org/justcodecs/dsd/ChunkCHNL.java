@@ -19,7 +19,7 @@ public class ChunkCHNL extends BaseChunk {
 				ds.readFully(IDBuf, 0, 4);
 				IDs[i] = new String(IDBuf);
 			}
-			System.out.printf("Chanels %s%n", Arrays.toString(IDs));
+			//System.out.printf("Chanels %s%n", Arrays.toString(IDs));
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

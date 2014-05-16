@@ -12,7 +12,7 @@ public class ChunkFVER extends BaseChunk {
 		super.read(ds);
 		try {
 			version = ds.readInt(true);
-			System.out.printf("Ver 0%x%n", version);
+			//System.out.printf("Ver 0%x%n", version);
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

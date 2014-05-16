@@ -10,16 +10,23 @@ public class BaseChunk {
 	long size;
 	long start;
 	byte[] data;
+	BaseChunk parent;
 	static byte[] IDBuf = new byte[4];
 
-	public static BaseChunk create(DSDStream ds) throws DecodeException {
+	public static BaseChunk create(DSDStream ds, BaseChunk parent) throws DecodeException {
 		try {
 			ds.readFully(IDBuf, 0, 4);
-			BaseChunk result = (BaseChunk) Class.forName(
-					BaseChunk.class.getPackage().getName() + ".Chunk" + new String(IDBuf).trim()).newInstance();
+			BaseChunk result;
+			try {
+				Class<?> chunkClass = Class.forName(
+						BaseChunk.class.getPackage().getName() + ".Chunk" + new String(IDBuf).trim());
+				result = (BaseChunk) chunkClass.newInstance();
+			} catch (ClassNotFoundException e) {
+				result = new ChunkUNK();
+			}
+			result.parent = parent;
 			result.read(ds);
 			return result;
-
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		} catch (Exception e) {
@@ -32,7 +39,7 @@ public class BaseChunk {
 		try {
 			size = ds.readLong(true);
 			start = ds.getFilePointer();
-			System.out.printf("Current %d,  size %d%n", start, size);
+			//System.out.printf("Current %x,  size %d%n", start, size);
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

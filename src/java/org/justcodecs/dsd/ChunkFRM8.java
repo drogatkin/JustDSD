@@ -15,8 +15,8 @@ public class ChunkFRM8 extends BaseChunk {
 				throw new DecodeException("Frame chunk isn't DSD", null);
 			for (;;) {
 				// read local chunks
-				BaseChunk c = BaseChunk.create(ds);
-				System.out.printf("--->%s%n", c);
+				BaseChunk c = BaseChunk.create(ds, this);
+				//System.out.printf("--->%s%n", c);
 				if (c instanceof ChunkPROP) {
 					props = (ChunkPROP)c;
 					break;

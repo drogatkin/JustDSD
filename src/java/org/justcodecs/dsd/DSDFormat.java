@@ -4,13 +4,13 @@ import java.io.IOException;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
-public abstract class DSDFormat {
+public abstract class DSDFormat<B> {
 	protected DSDStream dsdStream;
 
 	int bufPos = -1;
 	int bufEnd;
 	
-	void init(DSDStream ds) throws DecodeException {
+	public void init(DSDStream ds) throws DecodeException {
 		dsdStream = ds;
 	}
 
@@ -23,7 +23,8 @@ public abstract class DSDFormat {
 	
 	abstract void initBuffers(int overrun);
 	abstract boolean isMSB();
-	abstract byte[][] getSamples();
+	abstract B getSamples();
+	abstract void seek(long sampleNum) throws DecodeException;
 
 	public void close() {
 		try {

@@ -12,7 +12,7 @@ public class ChunkFS extends BaseChunk {
 		super.read(ds);
 		try {
 			sampleRate = ds.readInt(true);
-			System.out.printf("Rate %d%n", sampleRate);
+			//System.out.printf("Rate %d%n", sampleRate);
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

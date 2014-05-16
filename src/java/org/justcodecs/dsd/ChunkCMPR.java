@@ -19,8 +19,8 @@ public class ChunkCMPR extends BaseChunk {
 			byte buf[] = new byte[blen];
 			ds.readFully(buf, 0, blen);
 			description = new String(buf);
-			
-			System.out.printf("Comp %s%n", description);
+			skip(ds);
+			//System.out.printf("Comp %s%n", description);
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

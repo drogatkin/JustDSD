@@ -49,6 +49,10 @@ public class Decoder implements Filters {
 	public long getSampleCount() {
 		return dsdf.getSampleCount();
 	}
+	
+	public void seek(long sampleNum) throws DecodeException {
+		dsdf.seek(sampleNum);
+	}
 
 	public void dispose() {
 			dsdf.close();
@@ -132,8 +136,16 @@ return lookupTable.length;
 		boolean clip = clipAmplitude > 0;
 		int nStep = ratio / 8;
 		// get the sample buffer
-		byte buff[][] = dsdf.getSamples();
-		boolean ils = true;
+		Object dsamples = dsdf.getSamples();
+		byte buff[][] = null;
+		byte[] buffi = null;
+		if (dsamples instanceof byte[][])
+			buff = (byte[][])dsamples;
+		else if (dsamples instanceof byte[])
+			buffi = (byte[])dsamples;
+		else
+			throw new DecodeException("Unsupported buffer type", null);
+		boolean ils = buffi != null;
 		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTable.length*(ils?nsc:1) > dsdf.bufEnd) {
 			if (dsdf.readDataBlock() == false)
 				return -1;
@@ -142,10 +154,16 @@ return lookupTable.length;
 			// filter each chan in turn
 			for (int c = 0; c < nsc; c++) {
 				double sum = 0.0;
-				for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
-					int byt = ils?buff[0][dsdf.bufPos+t*nsc+c] &255:buff[c][dsdf.bufPos + t] & 0xFF;
-					sum += lookupTable[t][byt];
-				}
+				if (ils)
+					for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
+						int byt = buffi[dsdf.bufPos + t * nsc + c] & 255;
+						sum += lookupTable[t][byt];
+					}
+				else
+					for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
+						int byt = buff[c][dsdf.bufPos + t] & 0xFF;
+						sum += lookupTable[t][byt];
+					}
 				sum = sum * scale;
 				if (c == 0 && false)
 					System.out.printf(" %f%n", sum);

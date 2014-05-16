@@ -4,16 +4,17 @@ import java.io.IOException;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
-public class DSFFormat extends DSDFormat {
+public class DSFFormat extends DSDFormat<byte[][]> {
 	protected FMTChunk fmt;
 	protected DATAChunk dc;
 
 	@Override
+	public
 	void init(DSDStream ds) throws DecodeException {
 		super.init(ds);
 		DSDChunk.read(dsdStream);
 		fmt = FMTChunk.read(dsdStream);
-		System.out.printf("FMT:%s%n", fmt);
+		//System.out.printf("FMT:%s%n", fmt);
 		dc = DATAChunk.read(dsdStream);
 	}
 
@@ -76,6 +77,23 @@ public class DSFFormat extends DSDFormat {
 	@Override
 	byte[][] getSamples() {
 		return dc.data;
+	}
+	
+	@Override
+	void seek(long sampleNum) throws DecodeException {
+		try {
+			if (sampleNum == 0)
+				dsdStream.seek(dc.dataStart);
+			else {
+				// no accuracy for position in block
+				long block = sampleNum / (fmt.blockSize * 8); 
+				dsdStream.seek(dc.dataStart+block*fmt.blockSize*fmt.channelNum);
+				//throw new DecodeException("Pending", null);
+			}
+			bufPos = -1;
+		} catch (IOException e) {
+			throw new DecodeException("", e);
+		}
 	}
 
 }

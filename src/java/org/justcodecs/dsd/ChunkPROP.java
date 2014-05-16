@@ -9,6 +9,7 @@ public class ChunkPROP extends BaseChunk {
 	int channels;
 	String comp;
 	ChunkDSD dsd;
+	long bound;
 	
 	@Override
 	void read(DSDStream ds) throws DecodeException {		
@@ -19,7 +20,7 @@ public class ChunkPROP extends BaseChunk {
 				throw new DecodeException("PROP chunk isn't SND", null);
 			for (;;) {
 				// read local chinks
-				BaseChunk c = BaseChunk.create(ds);
+				BaseChunk c = BaseChunk.create(ds, this);
 				if (c instanceof ChunkFS)
 					sampleRate = ((ChunkFS)c).sampleRate;
 				else if (c instanceof ChunkCHNL)
@@ -28,9 +29,12 @@ public class ChunkPROP extends BaseChunk {
 					comp = ((ChunkCMPR)c).compression;
 				else if (c instanceof ChunkDSD) {
 					dsd = (ChunkDSD)c;
-					break;
+					//break;
 				}
-				//System.out.printf("--->%s%n", c);
+				//System.out.printf("--->%s at %d s+s%d%n", c, ds.getFilePointer(), c.start+c.size);
+				if (ds.getFilePointer() >= parent.start + parent.size)
+					break;
+				
 			}
 		} catch (IOException e) {
 			throw new DecodeException("", e);
