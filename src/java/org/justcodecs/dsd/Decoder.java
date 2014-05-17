@@ -1,6 +1,5 @@
 package org.justcodecs.dsd;
 
-import java.io.IOException;
 import java.util.Random;
 
 public class Decoder implements Filters {
@@ -30,32 +29,32 @@ public class Decoder implements Filters {
 		if (dsdf == null)
 			throw new DecodeException("Target PCM format has to be set after calling init", null);
 		pcmf = f;
-	ratio = getSampleRate() % pcmf.sampleRate;
-	if (ratio != 0)
-		throw new DecodeException("PCM sample rate doesn't multiplies 44100", null); 
-	ratio = getSampleRate() / pcmf.sampleRate;	
-	dsdf.initBuffers(initLookupTable());
+		ratio = getSampleRate() % pcmf.sampleRate;
+		if (ratio != 0)
+			throw new DecodeException("PCM sample rate doesn't multiplies 44100", null);
+		ratio = getSampleRate() / pcmf.sampleRate;
+		dsdf.initBuffers(initLookupTable());
 		rnd = new Random();
 	}
 
 	public void init(DSDFormat f) throws DecodeException {
 		dsdf = f;
 	}
-	
+
 	public int getSampleRate() {
 		return dsdf.getSampleRate();
 	}
-	
+
 	public long getSampleCount() {
 		return dsdf.getSampleCount();
 	}
-	
+
 	public void seek(long sampleNum) throws DecodeException {
 		dsdf.seek(sampleNum);
 	}
 
 	public void dispose() {
-			dsdf.close();
+		dsdf.close();
 	}
 
 	protected int initLookupTable() throws DecodeException {
@@ -72,7 +71,7 @@ public class Decoder implements Filters {
 		default:
 			throw new DecodeException("Incompatible sample rate combination " + ratio, null);
 		}
-return lookupTable.length;
+		return lookupTable.length;
 	}
 
 	// TODO why it can't be pre-populated without this exercise?
@@ -140,13 +139,13 @@ return lookupTable.length;
 		byte buff[][] = null;
 		byte[] buffi = null;
 		if (dsamples instanceof byte[][])
-			buff = (byte[][])dsamples;
+			buff = (byte[][]) dsamples;
 		else if (dsamples instanceof byte[])
-			buffi = (byte[])dsamples;
+			buffi = (byte[]) dsamples;
 		else
 			throw new DecodeException("Unsupported buffer type", null);
 		boolean ils = buffi != null;
-		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTable.length*(ils?nsc:1) > dsdf.bufEnd) {
+		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTable.length * (ils ? nsc : 1) > dsdf.bufEnd) {
 			if (dsdf.readDataBlock() == false)
 				return -1;
 		}
@@ -191,8 +190,8 @@ return lookupTable.length;
 			//currentSample++;
 			//if (currentSample >= fmt.sampleCount)
 			//return i;
-			dsdf.bufPos += nStep*(ils?nsc:1);
-			if (dsdf.bufPos + lookupTable.length*(ils?nsc:1) > dsdf.bufEnd) {
+			dsdf.bufPos += nStep * (ils ? nsc : 1);
+			if (dsdf.bufPos + lookupTable.length * (ils ? nsc : 1) > dsdf.bufEnd) {
 				if (dsdf.readDataBlock() == false)
 					return i; // was zeroing start
 			}
@@ -202,7 +201,7 @@ return lookupTable.length;
 
 	public int decodePCM(int[]... channels) throws DecodeException {
 		// 16 bits 96 db Math.pow(10.0,96/20)*Math.pow(2.0,16-1)
-		int scale = (1<<(pcmf.bitsPerSample)) -2;
+		int scale = (1 << (pcmf.bitsPerSample)) - 2;
 		return getSamples1(scale, 0, scale, channels);
 	}
 }

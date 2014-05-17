@@ -5,8 +5,7 @@ public class ChunkDITI extends TextChunk {
 
 	@Override
 	void setText(String string) {
-	
 		title = string;
-		System.out.printf("%s from %s%n", string, parent.getClass().getName());
+		//System.out.printf("%s from %s%n", string, parent.getClass().getName());
 	}
 }

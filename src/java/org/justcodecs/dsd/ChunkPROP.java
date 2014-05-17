@@ -27,6 +27,8 @@ public class ChunkPROP extends BaseChunk {
 					channels = ((ChunkCHNL)c).numChannels;
 				else if (c instanceof ChunkCMPR)
 					comp = ((ChunkCMPR)c).compression;
+				else if (c instanceof ChunkDITI)
+					((ChunkFRM8)parent).title = ((ChunkDITI)c).title;
 				else if (c instanceof ChunkDSD) {
 					dsd = (ChunkDSD)c;
 					//break;
