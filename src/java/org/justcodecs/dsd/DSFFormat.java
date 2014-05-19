@@ -7,15 +7,24 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 public class DSFFormat extends DSDFormat<byte[][]> {
 	protected FMTChunk fmt;
 	protected DATAChunk dc;
+	protected MetadataChunk md;
 
 	@Override
-	public
-	void init(DSDStream ds) throws DecodeException {
+	public void init(DSDStream ds) throws DecodeException {
 		super.init(ds);
-		DSDChunk.read(dsdStream);
+		DSDChunk dsd = DSDChunk.read(dsdStream);
 		fmt = FMTChunk.read(dsdStream);
 		//System.out.printf("FMT:%s%n", fmt);
 		dc = DATAChunk.read(dsdStream);
+		if (dsd.metadataOffs > 0) {
+			md = new MetadataChunk(dsd.metadataOffs);
+			try {
+				md.read(ds);
+				if (md.attrs != null)
+					attrs.putAll(md.attrs);
+			} catch (IOException e) {
+			}
+		}
 	}
 
 	@Override
@@ -78,7 +87,7 @@ public class DSFFormat extends DSDFormat<byte[][]> {
 	byte[][] getSamples() {
 		return dc.data;
 	}
-	
+
 	@Override
 	void seek(long sampleNum) throws DecodeException {
 		try {
@@ -86,8 +95,8 @@ public class DSFFormat extends DSDFormat<byte[][]> {
 				dsdStream.seek(dc.dataStart);
 			else {
 				// no accuracy for position in block
-				long block = sampleNum / (fmt.blockSize * 8); 
-				dsdStream.seek(dc.dataStart+block*fmt.blockSize*fmt.channelNum);
+				long block = sampleNum / (fmt.blockSize * 8);
+				dsdStream.seek(dc.dataStart + block * fmt.blockSize * fmt.channelNum);
 				//throw new DecodeException("Pending", null);
 			}
 			bufPos = -1;

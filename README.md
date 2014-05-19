@@ -1,4 +1,6 @@
-JustDSD
+<h2>JustDSD</h2>
 =======
 
-Sony HD audio format decoder and PCM encoder
+DSD audio format decoder and PCM encoder.
+It supports .DSF (Sony) and .DIFF (Philips) containers.
+ID3V2 metadata support provided by <a href="https://github.com/drogatkin/tiny-codec/tree/master/tools/ID3V2">tiny-codec</a>
