@@ -33,7 +33,7 @@ public class Player {
 	}
 
 	public void play(String f) throws Decoder.DecodeException {
-		Decoder decoder = new Decoder();
+		Decoder decoder = new DecoderInt();
 		long sampleCount = 0;
 		try {
 			DSDFormat dsd;

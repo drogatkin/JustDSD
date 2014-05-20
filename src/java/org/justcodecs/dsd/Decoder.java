@@ -22,7 +22,7 @@ public class Decoder implements Filters {
 	//protected long currentSample;
 	protected int ratio;
 
-	double[][] lookupTable;
+	private double[][] lookupTable;
 	Random rnd;
 
 	public void setPCMFormat(PCMFormat f) throws DecodeException {
@@ -72,6 +72,16 @@ public class Decoder implements Filters {
 			throw new DecodeException("Incompatible sample rate combination " + ratio, null);
 		}
 		return lookupTable.length;
+	}
+	
+	
+
+	protected double[][] getLookupTable() {
+		return lookupTable;
+	}
+
+	protected  void setLookupTable(double[][] lookupTable) {
+		this.lookupTable = lookupTable;
 	}
 
 	// TODO why it can't be pre-populated without this exercise?

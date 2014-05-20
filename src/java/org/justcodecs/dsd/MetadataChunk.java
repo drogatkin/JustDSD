@@ -38,7 +38,7 @@ public class MetadataChunk {
 	protected void storeAttr(ID3v2 id3, String name, int id) {
 		try {
 			TagContent tf = TextFrameEncoding.read(id3, id3.getFrameCode(id));
-			System.err.printf("proc %s %s%n", name, tf);
+			//System.err.printf("proc %s %s%n", name, tf);
 			if (tf != null) {
 				attrs.put(name, tf.getTextContent());
 			}
