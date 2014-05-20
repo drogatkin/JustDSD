@@ -82,6 +82,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			dsdStream.seek(frm.props.dsd.start + (sampleNum / 8)*getNumChannels());
 			//System.out.printf("Satrt play %d for sample %d%n", dsdStream.getFilePointer(), sampleNum);
 			bufPos = -1;
+			bufEnd = 0;
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

@@ -32,7 +32,7 @@ public class Player {
 	}
 	
 	Decoder createDecoder() {
-		return new DecoderInt();
+		return new Decoder();
 	}
 
 	public void play(String f) throws Decoder.DecodeException {

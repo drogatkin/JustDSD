@@ -100,6 +100,7 @@ public class DSFFormat extends DSDFormat<byte[][]> {
 				//throw new DecodeException("Pending", null);
 			}
 			bufPos = -1;
+			bufEnd = 0;
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}
