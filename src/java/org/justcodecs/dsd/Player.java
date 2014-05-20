@@ -29,11 +29,14 @@ public class Player {
 				e.printStackTrace();
 			}
 		}
-
+	}
+	
+	Decoder createDecoder() {
+		return new DecoderInt();
 	}
 
 	public void play(String f) throws Decoder.DecodeException {
-		Decoder decoder = new DecoderInt();
+		Decoder decoder = createDecoder();
 		long sampleCount = 0;
 		try {
 			DSDFormat dsd;

@@ -28,6 +28,7 @@ public class MetadataChunk {
 			storeAttr(id3, "Artist", ID3v2.ARTIST);
 			storeAttr(id3, "Title", ID3v2.TITLE);
 			storeAttr(id3, "Year", ID3v2.YEAR);
+			storeAttr(id3, "Genre", ID3v2.GENRE);
 		} catch (Exception e) {
 			throw new IOException(e);
 		} finally {
