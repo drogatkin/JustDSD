@@ -7,7 +7,7 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 public class DFFFormat extends DSDFormat<byte[]> {
 	ChunkFRM8 frm;
 	byte buff[];
-	static final int block = 2048;
+	int block = 2048;
 
 	@Override
 	public
@@ -78,6 +78,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 
 	@Override
 	void seek(long sampleNum) throws DecodeException {
+		//if (sampleNum < getSampleCount())
 		try {
 			dsdStream.seek(frm.props.dsd.start + (sampleNum / 8)*getNumChannels());
 			//System.out.printf("Satrt play %d for sample %d%n", dsdStream.getFilePointer(), sampleNum);

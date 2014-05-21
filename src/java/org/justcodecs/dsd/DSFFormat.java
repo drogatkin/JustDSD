@@ -93,12 +93,13 @@ public class DSFFormat extends DSDFormat<byte[][]> {
 		try {
 			if (sampleNum == 0)
 				dsdStream.seek(dc.dataStart);
-			else {
+			else if (sampleNum > 0 && sampleNum < getSampleCount()){
 				// no accuracy for position in block
 				long block = sampleNum / (fmt.blockSize * 8);
 				dsdStream.seek(dc.dataStart + block * fmt.blockSize * fmt.channelNum);
 				//throw new DecodeException("Pending", null);
-			}
+			} else 
+				throw new DecodeException("Trying to seek non existing sample "+sampleNum, null);
 			bufPos = -1;
 			bufEnd = 0;
 		} catch (IOException e) {

@@ -62,6 +62,7 @@ public class Player {
 			int bytesSample = channels * bytesChannelSample;
 			byte[] playBuffer = new byte[bytesSample * 2048];
 			decoder.seek(0);
+			boolean testSeek = false;
 			do {
 				int nsampl = decoder.decodePCM(samples);
 				if (nsampl <= 0)
@@ -78,6 +79,10 @@ public class Player {
 				//System.out.printf("%x", playBuffer[k]);
 				dl.write(playBuffer, 0, bp);
 				sampleCount += nsampl;
+				if (testSeek && sampleCount > pcmf.sampleRate *15) {
+					decoder.seek(decoder.getSampleRate()*60);
+					testSeek = false;
+				}
 			} while (true);
 			dl.stop();
 			dl.close();
