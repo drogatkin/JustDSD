@@ -8,6 +8,15 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 public abstract class DSDFormat<B> {
 	protected DSDStream dsdStream;
 	protected HashMap<String, Object> attrs;
+	public String getMetadataCharset() {
+		return metadataCharset;
+	}
+
+	public void setMetadataCharset(String metadataCharset) {
+		this.metadataCharset = metadataCharset;
+	}
+
+	protected String metadataCharset;
 
 	int bufPos = -1;
 	int bufEnd;

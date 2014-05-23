@@ -50,6 +50,7 @@ public class Player {
 			PCMFormat pcmf = new PCMFormat();
 			pcmf.sampleRate = 44100 * 2 * 2;
 			pcmf.bitsPerSample = 16;
+			//System.out.printf("clip: %x %x  %x-%x%n",((1 << pcmf.bitsPerSample) - 1) >> 1, 1 << pcmf.bitsPerSample, Short.MAX_VALUE, Short.MIN_VALUE); 
 			pcmf.channels = 2;
 			AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
 			SourceDataLine dl = AudioSystem.getSourceDataLine(af);

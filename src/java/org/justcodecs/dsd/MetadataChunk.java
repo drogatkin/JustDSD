@@ -3,26 +3,25 @@ package org.justcodecs.dsd;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.HashMap;
-import java.util.Vector;
 
 import de.vdheide.mp3.ID3v2;
-import de.vdheide.mp3.ID3v2Frame;
-import de.vdheide.mp3.ID3v2NoSuchFrameException;
 import de.vdheide.mp3.IOAdapter;
-import de.vdheide.mp3.NoID3v2TagException;
 import de.vdheide.mp3.TagContent;
 import de.vdheide.mp3.TextFrameEncoding;
 
 public class MetadataChunk {
-	public MetadataChunk(long metadataOffs) {
+	protected String encoding;
+	
+	public MetadataChunk(long metadataOffs, String enc) {
 		position = metadataOffs;
+		encoding = enc;
 	}
 
 	void read(DSDStream ds) throws IOException {
 		ds.seek(position);
 		IOAdapter io = null;
 		try {
-			ID3v2 id3 = new ID3v2(io = new IOAdapter((RandomAccessFile) ds), null);
+			ID3v2 id3 = new ID3v2(io = new IOAdapter((RandomAccessFile) ds), encoding);
 			attrs = new HashMap<String, Object>();
 			storeAttr(id3, "Album", ID3v2.ALBUM);
 			storeAttr(id3, "Artist", ID3v2.ARTIST);

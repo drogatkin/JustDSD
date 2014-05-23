@@ -211,7 +211,7 @@ public class Decoder implements Filters {
 
 	public int decodePCM(int[]... channels) throws DecodeException {
 		// 16 bits 96 db Math.pow(10.0,96/20)*Math.pow(2.0,16-1)
-		int scale = (1 << (pcmf.bitsPerSample)) - 2;
+		int scale = ((1 << pcmf.bitsPerSample) - 1) >> 1;
 		return getSamples1(scale, 0, scale, channels);
 	}
 }

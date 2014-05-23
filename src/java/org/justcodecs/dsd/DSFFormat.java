@@ -17,7 +17,7 @@ public class DSFFormat extends DSDFormat<byte[][]> {
 		//System.out.printf("FMT:%s%n", fmt);
 		dc = DATAChunk.read(dsdStream);
 		if (dsd.metadataOffs > 0) {
-			md = new MetadataChunk(dsd.metadataOffs);
+			md = new MetadataChunk(dsd.metadataOffs, metadataCharset);
 			try {
 				md.read(ds);
 				if (md.attrs != null)
