@@ -28,7 +28,17 @@ public class MetadataChunk {
 			storeAttr(id3, "Artist", ID3v2.ARTIST);
 			storeAttr(id3, "Title", ID3v2.TITLE);
 			storeAttr(id3, "Year", ID3v2.YEAR);
+			if (attrs.containsKey("Year"))
+				try {
+					attrs.put("Year", new Integer((String)attrs.get("Year")));
+				} catch(Exception e) {
+					
+				}
 			storeAttr(id3, "Genre", ID3v2.GENRE);
+			byte[] pic = id3.getPicture().getBinaryContent();
+			//System.out.printf("Pic%s%n", pic);
+			if (pic != null)
+				attrs.put("Picture", pic);
 		} catch (Exception e) {
 			throw new IOException(e);
 		} finally {
