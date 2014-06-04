@@ -1,0 +1,320 @@
+package org.justcodecs.dsd;
+
+import java.io.IOException;
+import java.util.Arrays;
+
+import org.justcodecs.dsd.Decoder.DecodeException;
+
+public interface Scarletbook {
+	static final int SACD_LSN_SIZE = 2048;
+	static final int SACD_SAMPLING_FREQUENCY = 2822400;
+
+	static final int START_OF_FILE_SYSTEM_AREA = 0;
+	static final int START_OF_MASTER_TOC = 510;
+	static final int MASTER_TOC_LEN = 10;
+	static final int MAX_AREA_TOC_SIZE_LSN = 96;
+	static final int MAX_LANGUAGE_COUNT = 8;
+	static final int MAX_CHANNEL_COUNT = 6;
+	static final int SAMPLES_PER_FRAME = 588;
+	static final int FRAME_SIZE_64 = (SAMPLES_PER_FRAME * 64 / 8);
+	static final int SUPPORTED_VERSION_MAJOR = 1;
+	static final int SUPPORTED_VERSION_MINOR = 20;
+
+	static final int MAX_GENRE_COUNT = 29;
+	static final int MAX_CATEGORY_COUNT = 3;
+	static final int SACD_PSN_SIZE = 2064;
+
+	static final int SACD_FRAME_RATE = 75;
+
+	static final int FRAME_FORMAT_DST = 0;
+	static final int FRAME_FORMAT_DSD_3_IN_14 = 2;
+	static final int FRAME_FORMAT_DSD_3_IN_16 = 3;
+
+	static final String CHARSET1[] = { null //      = 0
+			, "ISO646" //        = 1    // ISO 646 (IRV), no escape sequences allowed
+			, "ISO8859_1" //     = 2    // ISO 8859-1, no escape sequences allowed
+			, "RIS506" //        = 3    // MusicShiftJIS, per RIS-506 (RIAJ), Music Shift-JIS Kanji
+			, "KSC5601" //       = 4    // Korean KSC 5601-1987
+			, "GB2312" //        = 5    // Chinese GB 2312-80
+			, "BIG5" //          = 6    // Big5
+			, "ISO8859_1_ESC" // = 7    // ISO 8859-1, single byte set escape sequences allowed
+	};
+
+	static final String CHARSET[] = { "US-ASCII", "ISO646-JP", "ISO-8859-1", "SHIFT_JISX0213", "KSC5601.1987-0",
+			"GB2312.1980-0", "BIG5", "ISO-8859-1",
+
+	};
+
+	static final String GENRE[] = { "Not used", "Not defined", "Adult Contemporary", "Alternative Rock",
+			"Children's Music", "Classical", "Contemporary Christian", "Country", "Dance", "Easy Listening", "Erotic",
+			"Folk", "Gospel", "Hip Hop", "Jazz", "Latin", "Musical", "New Age", "Opera", "Operetta", "Pop Music",
+			"RAP", "Reggae", "Rock Music", "Rhythm & Blues", "Sound Effects", "Sound Track", "Spoken Word",
+			"World Music", "Blues" };
+
+	public static class Genre {
+		byte category;
+		byte genre;
+		static byte tb[] = new byte[4];
+
+		void read(DSDStream ds) throws DecodeException {
+			try {
+				ds.readFully(tb, 0, 4);
+				category = tb[0];
+				genre = tb[3];
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			}
+		}
+
+		@Override
+		public String toString() {
+			return "Genre [category=" + category + ", genre=" + genre + "]";
+		}
+
+	}
+
+	public static class LocaleTable {
+		String code;
+		String encoding;
+		static byte tb[] = new byte[4];
+
+		void read(DSDStream ds) throws DecodeException {
+			try {
+				ds.readFully(tb, 0, 4);
+				if (tb[0] == 0)
+					return;
+				code = new String(tb, 0, 2);
+				encoding = CHARSET[tb[2]];
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			} // TODO invalid index
+		}
+
+		@Override
+		public String toString() {
+			return "LocaleTable [code=" + code + ", encoding=" + encoding + "]";
+		}
+
+	}
+
+	public static class TOC {
+		byte[] id = new byte[8]; // SACDMTOC
+		byte major;
+		byte minor;
+		short albumSetSize;
+		short albumSequenceNumber;
+		String albumCatalogNumber; // 0x00 when empty, else padded with spaces for short strings
+		Genre albumGenre[] = new Genre[4];
+		int area1Toc1Start;
+		int area1Toc2Start;
+		int area_2_toc_1_start;
+		int area_2_toc_2_start;
+		short typeHybrid;
+		short area1TocSize;
+		short area_2_toc_size;
+		String discCatalogNumber; // 0x00 when empty, else padded with spaces for short strings
+		Genre discGenre[] = new Genre[4];
+		short disc_date_year;
+		byte disc_date_month;
+		byte disc_date_day;
+		byte text_area_count;
+		LocaleTable locales[] = new LocaleTable[MAX_LANGUAGE_COUNT];
+		static byte[] tb = new byte[20];
+
+		void read(DSDStream ds) throws DecodeException {
+			try {
+				ds.readFully(id, 0, id.length);
+				if ("SACDMTOC".equals(new String(id)) == false)
+					throw new DecodeException("It doesn't be appear SACD image", null);
+				ds.readFully(tb, 0, 2);
+				major = (byte) (tb[0] & 255);
+				minor = (byte) (tb[1] & 255);
+				ds.seek(ds.getFilePointer() + 6);
+				albumSetSize = ds.readShort(true);
+				albumSequenceNumber = ds.readShort(true);
+				ds.seek(ds.getFilePointer() + 4);
+				ds.readFully(tb, 0, 16);
+				if (tb[0] == 0)
+					albumCatalogNumber = "";
+				else
+					albumCatalogNumber = new String(tb, 0, 16).trim();
+				for (int i = 0; i < 4; i++) {
+					albumGenre[i] = new Genre();
+					albumGenre[i].read(ds);
+				}
+				ds.seek(ds.getFilePointer() + 8);
+				area1Toc1Start = ds.readInt(true);
+				area1Toc2Start = ds.readInt(true);
+				area_2_toc_1_start = ds.readInt(true);
+				area_2_toc_2_start = ds.readInt(true);
+				typeHybrid = ds.readShort(false);
+				ds.seek(ds.getFilePointer() + 2);
+				area1TocSize = ds.readShort(true);
+				area_2_toc_size = ds.readShort(true);
+				ds.readFully(tb, 0, 16);
+				if (tb[0] == 0)
+					discCatalogNumber = "";
+				else
+					discCatalogNumber = new String(tb, 0, 16).trim();
+				for (int i = 0; i < 4; i++) {
+					discGenre[i] = new Genre();
+					discGenre[i].read(ds);
+				}
+				disc_date_year = ds.readShort(true);
+				ds.readFully(tb, 0, 2);
+				disc_date_month = tb[0];
+				disc_date_day = tb[1];
+				ds.seek(ds.getFilePointer() + 4);
+				ds.readFully(tb, 0, 1);
+				text_area_count = tb[0];
+				ds.seek(ds.getFilePointer() + 7);
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			}
+		}
+
+		@Override
+		public String toString() {
+			return "TOC [id=" + Arrays.toString(id) + ", major=" + major + ", minor=" + minor + ", albumSetSize="
+					+ albumSetSize + ", albumSequenceNumber=" + albumSequenceNumber + ", albumCatalogNumber="
+					+ albumCatalogNumber + ", album_genre=" + Arrays.toString(albumGenre) + ", area_1_toc_1_start="
+					+ area1Toc1Start + ", area_1_toc_2_start=" + area1Toc2Start + ", area_2_toc_1_start="
+					+ area_2_toc_1_start + ", area_2_toc_2_start=" + area_2_toc_2_start + ", typeHybrid=" + typeHybrid
+					+ ", area_1_toc_size=" + area1TocSize + ", area_2_toc_size=" + area_2_toc_size
+					+ ", disc_catalog_number=" + discCatalogNumber + ", disc_genre=" + Arrays.toString(discGenre)
+					+ ", disc_date_year=" + disc_date_year + ", disc_date_month=" + disc_date_month
+					+ ", disc_date_day=" + disc_date_day + ", text_area_count=" + text_area_count + ", locales="
+					+ Arrays.toString(locales) + "]";
+		}
+
+	}
+
+	static class AreaTOC {
+		byte id[] = new byte[8]; // TWOCHTOC or MULCHTOC
+		byte major;
+		byte minor; // 1.20 / 0x0114
+		short size; // ex. 40 (total size of TOC)
+		boolean stereo;
+		int max_byte_rate;
+		int sample_frequency; // 0x04 = (64 * 44.1 kHz) (physically there can be no other values, or..? :)
+		byte frame_format;
+
+		byte channel_count;
+		byte loudspeaker_config;
+
+		byte max_available_channels;
+		byte area_mute_flags;
+		byte track_attribute;
+
+		byte minutes;
+		byte seconds;
+		byte frames;
+
+		byte track_offset;
+		byte track_count;
+
+		int track_start;
+		int track_end;
+		byte text_area_count;
+
+		LocaleTable locales[] = new LocaleTable[MAX_LANGUAGE_COUNT + 2];
+		short track_text_offset;
+		short index_list_offset;
+		short access_list_offset;
+		short area_description_offset;
+		short copyright_offset;
+		short area_description_phonetic_offset;
+		short copyright_phonetic_offset;
+		byte data[] = new byte[1896];
+		static byte[] tb = new byte[20];
+
+		void read(DSDStream ds) throws DecodeException {
+			// TODO consider read in byte buffer and then extract parts
+			try {
+				ds.readFully(id, 0, id.length);
+				String ID = new String(id);
+				stereo = "TWOCHTOC".equals(ID);
+				if (!stereo && "MULCHTOC".equals(ID) == false)
+					throw new DecodeException("Unsupported area toc:" + ID, null);
+				ds.readFully(tb, 0, 2);
+				major = (byte) (tb[0] & 255);
+				minor = (byte) (tb[1] & 255);
+				size = ds.readShort(true);
+				ds.seek(ds.getFilePointer() + 4);
+				max_byte_rate = ds.readInt(true);
+				ds.readFully(tb, 0, 2); //System.out.printf("fr:%d%n", tb[0]);
+				sample_frequency = 16 * 44100 * (tb[0] & 255);
+				frame_format = tb[1];
+				ds.seek(ds.getFilePointer() + 10);
+				ds.readFully(tb, 0, 4);
+				channel_count = tb[0];
+				loudspeaker_config = tb[1];
+				max_available_channels = tb[2];
+				area_mute_flags = tb[3];
+				ds.seek(ds.getFilePointer() + 12);
+				ds.readFully(tb, 0, 1);
+				track_attribute = tb[0];
+				ds.seek(ds.getFilePointer() + 15);
+				ds.readFully(tb, 0, 3);
+				minutes = tb[0];
+				seconds = tb[1];
+				frames = tb[3];
+				ds.readFully(tb, 0, 5);
+				track_offset = tb[1];
+				track_count = tb[2];
+				track_start = ds.readInt(true);
+				track_end = ds.readInt(true);
+				ds.readFully(tb, 0, 8);
+				text_area_count = tb[0];
+
+				for (int i = 0; i < locales.length; i++) {
+					locales[i] = new LocaleTable();
+					locales[i].read(ds);
+				}
+				track_text_offset = ds.readShort(true);
+				index_list_offset = ds.readShort(true);
+				access_list_offset = ds.readShort(true);
+				ds.seek(ds.getFilePointer() + 10);
+				area_description_offset = ds.readShort(true);
+				copyright_offset = ds.readShort(true);
+				area_description_phonetic_offset = ds.readShort(true);
+				copyright_phonetic_offset = ds.readShort(true);
+				ds.readFully(data, 0, data.length);
+				System.out.printf("Copyright %s%n", new String(data, copyright_offset, 10));
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			}
+		}
+
+		@Override
+		public String toString() {
+			return "AreaTOC [id=" + Arrays.toString(id) + ", major=" + major + ", minor=" + minor + ", size=" + size
+					+ ", stereo=" + stereo + ", max_byte_rate=" + max_byte_rate + ", sample_frequency="
+					+ sample_frequency + ", frame_format=" + frame_format + ", channel_count=" + channel_count
+					+ ", loudspeaker_config=" + loudspeaker_config + ", max_available_channels="
+					+ max_available_channels + ", area_mute_flags=" + area_mute_flags + ", track_attribute="
+					+ track_attribute + ", minutes=" + minutes + ", seconds=" + seconds + ", frames=" + frames
+					+ ", track_offset=" + track_offset + ", track_count=" + track_count + ", track_start="
+					+ track_start + ", track_end=" + track_end + ", text_area_count=" + text_area_count + ", locales="
+					+ Arrays.toString(locales) + ", track_text_offset=" + track_text_offset + ", index_list_offset="
+					+ index_list_offset + ", access_list_offset=" + access_list_offset + ", area_description_offset="
+					+ area_description_offset + ", copyright_offset=" + copyright_offset
+					+ ", area_description_phonetic_offset=" + area_description_phonetic_offset
+					+ ", copyright_phonetic_offset=" + copyright_phonetic_offset + "]";
+		}
+
+	}
+	
+	static class AudioFrame {
+	    byte data[];
+	    int                 size;
+	    int                 started;
+	    int                 sector_count;
+	    int                 channel_count;
+	    boolean         dst_encoded;
+	}
+	
+	static class AudioSector {
+		
+	}
+}

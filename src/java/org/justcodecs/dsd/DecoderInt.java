@@ -36,7 +36,7 @@ public class DecoderInt extends Decoder implements FiltersInt {
 
 	int getSamples2(int clipAmplitude, int[][] samples) throws DecodeException {
 		if (samples.length < dsdf.getNumChannels())
-			throw new DecodeException("Allocated sample buffers less than number of channels", null);
+			throw new DecodeException("Number of allocated sample buffers is less than number of channels", null);
 		int tpdfDitherPeakAmplitude = 0;
 		Object dsamples = dsdf.getSamples();
 		byte buff[][] = null;

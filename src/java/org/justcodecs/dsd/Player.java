@@ -42,6 +42,8 @@ public class Player {
 			DSDFormat dsd;
 			if (f.endsWith(".dsf")) {
 				dsd = new DSFFormat();
+			} else if (f.endsWith(".iso")) {
+				dsd = new DISOFormat();
 			} else
 				dsd = new DFFFormat();
 			dsd.init(new Utils.RandomDSDStream(new File(f)));
