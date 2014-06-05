@@ -1,7 +1,9 @@
 package org.justcodecs.dsd;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
@@ -29,6 +31,11 @@ public interface Scarletbook {
 	static final int FRAME_FORMAT_DST = 0;
 	static final int FRAME_FORMAT_DSD_3_IN_14 = 2;
 	static final int FRAME_FORMAT_DSD_3_IN_16 = 3;
+
+	static final short AUDIO_PACKET_INFO_SIZE = 2;
+	static final short AUDIO_FRAME_DST_INFO_SIZE = 4; // for DST only
+	static final short AUDIO_FRAME_INFO_SIZE = 3; // for two channels
+	static final short AUDIO_SECTOR_HEADER_SIZE = 1;
 
 	static final String CHARSET1[] = { null //      = 0
 			, "ISO646" //        = 1    // ISO 646 (IRV), no escape sequences allowed
@@ -84,7 +91,7 @@ public interface Scarletbook {
 				if (tb[0] == 0)
 					return;
 				code = new String(tb, 0, 2);
-				encoding = CHARSET[tb[2]];
+				encoding = CHARSET[tb[2] & 7];
 			} catch (IOException e) {
 				throw new DecodeException("IO", e);
 			} // TODO invalid index
@@ -279,8 +286,8 @@ public interface Scarletbook {
 				copyright_offset = ds.readShort(true);
 				area_description_phonetic_offset = ds.readShort(true);
 				copyright_phonetic_offset = ds.readShort(true);
-				ds.readFully(data, 0, data.length);
-				System.out.printf("Copyright %s%n", new String(data, copyright_offset, 10));
+				////ds.readFully(data, 0, data.length);
+				//System.out.printf("Copyright %s%n", new String(data, 0, data.length));
 			} catch (IOException e) {
 				throw new DecodeException("IO", e);
 			}
@@ -304,17 +311,249 @@ public interface Scarletbook {
 		}
 
 	}
-	
-	static class AudioFrame {
-	    byte data[];
-	    int                 size;
-	    int                 started;
-	    int                 sector_count;
-	    int                 channel_count;
-	    boolean         dst_encoded;
+
+	static class CDText {
+		byte id[] = new byte[8]; // SACDText
+		short album_title_position;
+		short album_artist_position;
+		short album_publisher_position;
+		short album_copyright_position;
+		short album_title_phonetic_position;
+		short album_artist_phonetic_position;
+		short album_publisher_phonetic_position;
+		short album_copyright_phonetic_position;
+		short disc_title_position;
+		short disc_artist_position;
+		short disc_publisher_position;
+		short disc_copyright_position;
+		short disc_title_phonetic_position;
+		short disc_artist_phonetic_position;
+		short disc_publisher_phonetic_position;
+		short disc_copyright_phonetic_position;
+		static byte data[] = new byte[2000];
+		HashMap<String, String> textInfo = new HashMap<String, String>();
+
+		void read(DSDStream ds, String encoding) throws DecodeException {
+			//if (encoding == null)
+			encoding = "UTF-8";
+			try {
+				ds.readFully(id, 0, id.length);
+				String ID = new String(id);
+				if ("SACDText".equals(ID) == false)
+					throw new DecodeException("Text area not found " + ID, null);
+				ds.seek(ds.getFilePointer() + 8);
+				album_title_position = ds.readShort(true);
+				album_artist_position = ds.readShort(true);
+				album_publisher_position = ds.readShort(true);
+				album_copyright_position = ds.readShort(true);
+				album_title_phonetic_position = ds.readShort(true);
+				album_artist_phonetic_position = ds.readShort(true);
+				album_publisher_phonetic_position = ds.readShort(true);
+				album_copyright_phonetic_position = ds.readShort(true);
+				disc_title_position = ds.readShort(true);
+				disc_artist_position = ds.readShort(true);
+				disc_publisher_position = ds.readShort(true);
+				disc_copyright_position = ds.readShort(true);
+				disc_title_phonetic_position = ds.readShort(true);
+				disc_artist_phonetic_position = ds.readShort(true);
+				disc_publisher_phonetic_position = ds.readShort(true);
+				disc_copyright_phonetic_position = ds.readShort(true);
+				ds.readFully(data, 0, data.length);
+				addText("album_title", album_title_position, encoding);
+				addText("album_artist", album_artist_position, encoding);
+				addText("album_publisher", album_publisher_position, encoding);
+				addText("album_copyright", album_copyright_position, encoding);
+				addText("album_title_phonetic", album_title_phonetic_position, encoding);
+				addText("album_artist_phonetic", album_artist_phonetic_position, encoding);
+				addText("album_title_phonetic", album_title_phonetic_position, encoding);
+				addText("album_artist_phonetic", album_artist_phonetic_position, encoding);
+				addText("album_publisher_phonetic", album_publisher_phonetic_position, encoding);
+				addText("album_copyright_phonetic", album_copyright_phonetic_position, encoding);
+				addText("disc_title", disc_title_position, encoding);
+				addText("disc_artist", disc_artist_position, encoding);
+				addText("disc_publisher", disc_publisher_position, encoding);
+				addText("disc_copyright", disc_copyright_position, encoding);
+				addText("disc_title_phonetic", disc_title_phonetic_position, encoding);
+				//System.out.printf("Text %s%n", textInfo);
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			}
+		}
+
+		public String getText(String name) {
+			return textInfo.get(name);
+		}
+
+		void addText(String name, short offset, String encoding) {
+			if (offset == 0)
+				return;
+			try {
+				for (int len = 0; len < 255; len++) {
+					if (data[offset - 48 + len] == 0) {
+						if (len > 0)
+							textInfo.put(name, new String(data, offset - 48, len, encoding));
+						return;
+					}
+				}
+				textInfo.put(name, new String(data, offset - 48, 255, encoding));
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
-	
-	static class AudioSector {
+
+	static class TrackInfo extends HashMap<String, String> {
+		int position;
+		int start;
+		int duration;
+
+		static final int TRACK_TYPE_TITLE = 0x01;
+		static final int TRACK_TYPE_PERFORMER = 0x02;
+		static final int TRACK_TYPE_SONGWRITER = 0x03;
+		static final int TRACK_TYPE_COMPOSER = 0x04;
+		static final int TRACK_TYPE_ARRANGER = 0x05;
+		static final int TRACK_TYPE_MESSAGE = 0x06;
+		static final int TRACK_TYPE_EXTRA_MESSAGE = 0x07;
+
+		static final int TRACK_TYPE_TITLE_PHONETIC = 0x81;
+		static final int TRACK_TYPE_PERFORMER_PHONETIC = 0x82;
+		static final int TRACK_TYPE_SONGWRITER_PHONETIC = 0x83;
+		static final int TRACK_TYPE_COMPOSER_PHONETIC = 0x84;
+		static final int TRACK_TYPE_ARRANGER_PHONETIC = 0x85;
+		static final int TRACK_TYPE_MESSAGE_PHONETIC = 0x86;
+		static final int TRACK_TYPE_EXTRA_MESSAGE_PHONETIC = 0x87;
+
+		TrackInfo(int pos) {
+			position = pos;
+			//System.out.printf("Track for %d%n", pos);
+		}
+
+		public void fill(byte[] data, int off) {
+			int cp = position - off;
+			byte amount = data[cp];
+			//System.out.printf("Amount %d,  pos %d%n", amount, cp);
+			cp += 4;
+			for (int i = 0; i < amount; i++) {
+				byte type = data[cp];
+				cp += 2;
+				if (data[cp] != 0) {
+					switch (type & 255) {
+					case TRACK_TYPE_TITLE:
+						cp += addText(data, "title", cp, "UTF-8");
+						//System.out.printf("Title %s%n", get("title"));
+						break;
+					case TRACK_TYPE_PERFORMER:
+						cp += addText(data, "performer", cp, "UTF-8");
+						break;
+					default:
+						while(cp < data.length && data[cp] != 0)
+							cp++;
+					}
+				}
+				
+				while(cp < data.length && data[cp] == 0)
+					cp++;
+			}
+		}
+		
+		int addText(byte[] data, String name, int cp, String encoding) {
+			try {
+				for (int len = 0; len < 255; len++) {
+					if (data[cp + len] == 0) {
+						if (len > 0)
+							put(name, new String(data, cp, len, encoding));
+						return len;
+					}
+				}
+				put(name, new String(data, cp, 255, encoding));
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return 255;
+		}
+
+		@Override
+		public String toString() {
+			return "TrackInfo [start=" + start + ", duration=" + duration + ", toString()=" + super.toString() + "]";
+		}
 		
 	}
+
+	static class TrackText {
+		byte[] id = new byte[8];
+		TrackInfo[] infos;
+		static byte data[] = new byte[2000];
+
+		public TrackText(byte trackCount) {
+			infos = new TrackInfo[trackCount];
+		}
+
+		void read(DSDStream ds, String encoding) throws DecodeException {
+			//if (encoding == null)
+			encoding = "UTF-8";
+			try {
+				ds.readFully(id, 0, id.length);
+				String ID = new String(id);
+				if ("SACDTTxt".equals(ID) == false) {
+					ds.seek(ds.getFilePointer() - 8);
+					throw new DecodeException("Track text not found " + ID, null);
+				}
+				int off = 0;
+				System.out.printf("Entries:%d%n", infos.length);
+				for (int i = 0; i < infos.length; i++) {
+					short pos = ds.readShort(true);
+					if (pos > 0) {
+						infos[i] = new TrackInfo(pos);
+						if (off == 0)
+							off = pos;
+						else if (pos < off)
+							off = pos;
+					}
+				}
+				//off -= id.length+infos.length*2;
+				//System.out.printf("Entries:%d, red %d%n", infos.length, off);
+				ds.seek(ds.getFilePointer() + off - (id.length+infos.length*2));
+				ds.readFully(data, 0, data.length);
+				for (int i = 0; i < infos.length; i++) {
+					if (infos[i] != null) {
+						infos[i].fill(data, off);
+					}
+				}
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			}
+		}
+	}
+	
+	static class TrackTime {
+		byte[] id = new byte[8];
+		static byte data[]  = new byte[4*255*2];
+	
+		void read(DSDStream ds )throws DecodeException {
+			try {
+				ds.readFully(id, 0, id.length);
+				String ID = new String(id);
+				if ("SACDTRL2".equals(ID) == false) {
+					ds.seek(ds.getFilePointer() - 8);
+					throw new DecodeException("Track time not found " + ID, null);
+				}
+				ds.readFully(data, 0, data.length);
+			} catch (IOException e) {
+				throw new DecodeException("IO", e);
+			}
+		}
+		
+		int getStart(int trackN) {
+			int off = trackN*4;
+			return data[off]*60+data[off+1]+data[off+2/SACD_FRAME_RATE];
+		}
+		
+		int getDuration(int trackN) {
+			int off = 255*4+trackN*4;
+			return data[off]*60+data[off+1]+data[off+2/SACD_FRAME_RATE];
+		}
+	}
+	
 }

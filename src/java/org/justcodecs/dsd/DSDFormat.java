@@ -1,6 +1,7 @@
 package org.justcodecs.dsd;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
@@ -54,7 +55,8 @@ public abstract class DSDFormat<B> {
 
 	@Override
 	public String toString() {
-		return "DSDFormat [attrs=" + attrs + ", rate=" + getSampleRate() +", channels=" + getNumChannels() + "]";
+		String tracks = Arrays.toString((Object[])(attrs==null?null:attrs.get("Tracks")));
+		return "DSDFormat [attrs=" + attrs + ", rate=" + getSampleRate() +", channels=" + getNumChannels() + ", tracks:" + tracks + "]";
 	}
 	
 	//protected void setMetadata(String)
