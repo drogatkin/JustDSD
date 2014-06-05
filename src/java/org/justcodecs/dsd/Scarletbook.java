@@ -48,8 +48,7 @@ public interface Scarletbook {
 	};
 
 	static final String CHARSET[] = { "US-ASCII", "ISO646-JP", "ISO-8859-1", "SHIFT_JISX0213", "KSC5601.1987-0",
-			"GB2312.1980-0", "BIG5", "ISO-8859-1",
-
+			"GB2312.1980-0", "BIG5", "ISO-8859-1"
 	};
 
 	static final String GENRE[] = { "Not used", "Not defined", "Adult Contemporary", "Alternative Rock",
@@ -60,14 +59,14 @@ public interface Scarletbook {
 
 	public static class Genre {
 		byte category;
-		byte genre;
+		String genre;
 		static byte tb[] = new byte[4];
 
 		void read(DSDStream ds) throws DecodeException {
 			try {
 				ds.readFully(tb, 0, 4);
 				category = tb[0];
-				genre = tb[3];
+				genre = GENRE[tb[3]];
 			} catch (IOException e) {
 				throw new DecodeException("IO", e);
 			}
@@ -403,10 +402,10 @@ public interface Scarletbook {
 		}
 	}
 
-	static class TrackInfo extends HashMap<String, String> {
+	public static class TrackInfo extends HashMap<String, String> {
 		int position;
-		int start;
-		int duration;
+		public int start;
+		public int duration;
 
 		static final int TRACK_TYPE_TITLE = 0x01;
 		static final int TRACK_TYPE_PERFORMER = 0x02;

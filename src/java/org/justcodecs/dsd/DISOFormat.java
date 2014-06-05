@@ -68,7 +68,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 			attrs.put("Title", ctx.textInfo.get("disc_title"));
 			attrs.put("Album", ctx.textInfo.get("album_title"));
 			attrs.put("Tracks", ttx.infos);
-			attrs.put("Year", toc.disc_date_year);
+			attrs.put("Year", new Integer(toc.disc_date_year));
+			attrs.put("Genre", toc.albumGenre[0].genre);
 		} catch (IOException ioe) {
 			throw new DecodeException("IO", ioe);
 		}
@@ -120,7 +121,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 	public long getSampleCount() {
 		if (atoc == null)
 			return 0;
-		return (atoc.minutes * 60 + atoc.seconds + atoc.frames / SACD_FRAME_RATE) * getSampleRate();
+		return (long)(atoc.minutes * 60 + atoc.seconds + atoc.frames / SACD_FRAME_RATE) * getSampleRate();
 	}
 
 	@Override
@@ -152,7 +153,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				dsdStream.seek(atoc.track_start * sectorSize);
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()){
 				// no accuracy for position in block
-				long bn = sampleNum / block / 8 / getNumChannels() ; // TODO check if bn out of range
+				long bn = sampleNum / block / 8 * getNumChannels() ; // TODO check if bn out of range
 				if (atoc.track_end <= bn)
 					throw new DecodeException("Trying to after end sector "+atoc.track_end, null);
 				dsdStream.seek((long)(atoc.track_start+bn) * sectorSize);
