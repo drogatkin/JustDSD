@@ -36,6 +36,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				if (!atoc.stereo)
 					throw new DecodeException("No two channels tracks found", null);
 			}
+			if (atoc.frame_format == FRAME_FORMAT_DST)
+				throw new DecodeException("DST compression isn't supported", null);
 			//System.out.printf("Area-> %s%n", atoc);
 			ds.seek((START_OF_MASTER_TOC + 1) * (SACD_LSN_SIZE));
 			CDText ctx = new CDText();
@@ -153,7 +155,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				dsdStream.seek(atoc.track_start * sectorSize);
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()){
 				// no accuracy for position in block
-				long bn = sampleNum / block / 8 * getNumChannels() ; // TODO check if bn out of range
+				long bn = sampleNum / sectorSize / 8 * getNumChannels() ;
 				if (atoc.track_end <= bn)
 					throw new DecodeException("Trying to after end sector "+atoc.track_end, null);
 				dsdStream.seek((long)(atoc.track_start+bn) * sectorSize);

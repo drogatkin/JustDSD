@@ -83,7 +83,7 @@ public class Player {
 				dl.write(playBuffer, 0, bp);
 				sampleCount += nsampl;
 				if (testSeek && sampleCount > pcmf.sampleRate *10) {
-					decoder.seek(decoder.getSampleRate()*180);
+					decoder.seek((long)decoder.getSampleRate()*(1776));
 					testSeek = false;
 				}
 			} while (true);
