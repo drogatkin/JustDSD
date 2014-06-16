@@ -37,6 +37,12 @@ public interface Scarletbook {
 	static final short AUDIO_FRAME_INFO_SIZE = 3; // for two channels
 	static final short AUDIO_SECTOR_HEADER_SIZE = 1;
 
+	static final int DATA_TYPE_AUDIO = 2;
+	static final int DATA_TYPE_SUPPLEMENTARY = 3;
+	static final int DATA_TYPE_PADDING = 7;
+	
+	static final int MAX_DST_SIZE = (1024 * 64);
+
 	static final String CHARSET1[] = { null //      = 0
 			, "ISO646" //        = 1    // ISO 646 (IRV), no escape sequences allowed
 			, "ISO8859_1" //     = 2    // ISO 8859-1, no escape sequences allowed
@@ -48,8 +54,7 @@ public interface Scarletbook {
 	};
 
 	static final String CHARSET[] = { "US-ASCII", "ISO646-JP", "ISO-8859-1", "SHIFT_JISX0213", "KSC5601.1987-0",
-			"GB2312.1980-0", "BIG5", "ISO-8859-1"
-	};
+			"GB2312.1980-0", "BIG5", "ISO-8859-1" };
 
 	static final String GENRE[] = { "Not used", "Not defined", "Adult Contemporary", "Alternative Rock",
 			"Children's Music", "Classical", "Contemporary Christian", "Country", "Dance", "Easy Listening", "Erotic",
@@ -311,6 +316,109 @@ public interface Scarletbook {
 
 	}
 
+	static class FrmHeader {
+		static byte buf[] = new byte[1 + 7 * (AUDIO_PACKET_INFO_SIZE + AUDIO_FRAME_DST_INFO_SIZE)];
+
+		boolean dst;
+		int frame_info_count;
+		int packet_info_count;
+
+		void read(DSDStream ds) throws DecodeException {
+			try {
+				ds.readFully(buf, 0, 1);
+				dst = (buf[0] & 1) == 1;
+				frame_info_count = (buf[0] >> 2) & 7;
+				packet_info_count = (buf[0] >> 5) & 7;
+				ds.readFully(buf, 1, AUDIO_PACKET_INFO_SIZE * packet_info_count
+						+ (dst ? AUDIO_FRAME_DST_INFO_SIZE : AUDIO_FRAME_INFO_SIZE) * frame_info_count);
+			} catch (IOException e) {
+				throw new DecodeException("I/O", e);
+			}
+		}
+
+		int getPackLen(int pacNo) {
+			if (pacNo < 0 || pacNo >= packet_info_count)
+				return -1;
+			return buf[1 + pacNo * 2 + 1] + ((buf[1 + pacNo * 2] & 7) << 8);
+		}
+
+		int getDataType(int pacNo) {
+			if (pacNo < 0 || pacNo >= packet_info_count)
+				return -1;
+			return (buf[1 + pacNo * 2] >> 3) & 7;
+		}
+
+		boolean isFrameStart(int pacNo) {
+			if (pacNo < 0 || pacNo >= packet_info_count)
+				return false;
+			return ((buf[1 + pacNo * 2] >> 7) & 1) == 1;
+		}
+
+		int getMinutes(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return buf[1 + packet_info_count * AUDIO_PACKET_INFO_SIZE + frmNo * 4];
+		}
+
+		int getSeconds(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return buf[1 + packet_info_count * AUDIO_PACKET_INFO_SIZE + frmNo * 4 + 1];
+		}
+
+		int getFrames(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return buf[1 + packet_info_count * AUDIO_PACKET_INFO_SIZE + frmNo * 4 + 2];
+		}
+
+		byte getChannelsByte(int frmNo) {
+			return buf[1 + packet_info_count * AUDIO_PACKET_INFO_SIZE + frmNo * 4 + 3];
+		}
+
+		int getSectorCount(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return (getChannelsByte(frmNo) >> 2) & 0x1f;
+		}
+
+		int getChannelBit1(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return (getChannelsByte(frmNo) >> 7) & 0x1;
+		}
+
+		int getChannelBit2(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return (getChannelsByte(frmNo) >> 1) & 0x1;
+		}
+
+		int getChannelBit3(int frmNo) {
+			if (frmNo < 0 || frmNo >= frame_info_count)
+				return -1;
+			return getChannelsByte(frmNo) & 0x1;
+		}
+
+		@Override
+		public String toString() {
+			String infos = "";
+
+			for (int i = 0; i < packet_info_count; i++) {
+				infos += " Packet " + i + ", lengh " + getPackLen(i) + ", start " + isFrameStart(i) + ", type "
+						+ getDataType(i);
+			}
+			for (int i = 0; i < frame_info_count; i++) {
+				infos += " Frame " + i + ",m:" + getMinutes(i) + ",s:" + getSeconds(i) + ",f:" + getFrames(i)
+						+ ", sector count " + getSectorCount(i) + ", channel bit1 " + getChannelBit1(i)
+						+ ", channel bit2 " + getChannelBit2(i) + ", channel bit3 " + getChannelBit3(i);
+			}
+			return "FrmHeader [dst=" + dst + ", frame_info_count=" + frame_info_count + ", packet_info_count="
+					+ packet_info_count + infos + "]";
+		}
+
+	}
+
 	static class CDText {
 		byte id[] = new byte[8]; // SACDText
 		short album_title_position;
@@ -446,16 +554,16 @@ public interface Scarletbook {
 						cp += addText(data, "performer", cp, "UTF-8");
 						break;
 					default:
-						while(cp < data.length && data[cp] != 0)
+						while (cp < data.length && data[cp] != 0)
 							cp++;
 					}
 				}
-				
-				while(cp < data.length && data[cp] == 0)
+
+				while (cp < data.length && data[cp] == 0)
 					cp++;
 			}
 		}
-		
+
 		int addText(byte[] data, String name, int cp, String encoding) {
 			try {
 				for (int len = 0; len < 255; len++) {
@@ -477,7 +585,7 @@ public interface Scarletbook {
 		public String toString() {
 			return "TrackInfo [start=" + start + ", duration=" + duration + ", toString()=" + super.toString() + "]";
 		}
-		
+
 	}
 
 	static class TrackText {
@@ -513,7 +621,7 @@ public interface Scarletbook {
 				}
 				//off -= id.length+infos.length*2;
 				//System.out.printf("Entries:%d, red %d%n", infos.length, off);
-				ds.seek(ds.getFilePointer() + off - (id.length+infos.length*2));
+				ds.seek(ds.getFilePointer() + off - (id.length + infos.length * 2));
 				ds.readFully(data, 0, data.length);
 				for (int i = 0; i < infos.length; i++) {
 					if (infos[i] != null) {
@@ -525,12 +633,12 @@ public interface Scarletbook {
 			}
 		}
 	}
-	
+
 	static class TrackTime {
 		byte[] id = new byte[8];
-		static byte data[]  = new byte[4*255*2];
-	
-		void read(DSDStream ds )throws DecodeException {
+		static byte data[] = new byte[4 * 255 * 2];
+
+		void read(DSDStream ds) throws DecodeException {
 			try {
 				ds.readFully(id, 0, id.length);
 				String ID = new String(id);
@@ -543,16 +651,16 @@ public interface Scarletbook {
 				throw new DecodeException("IO", e);
 			}
 		}
-		
+
 		int getStart(int trackN) {
-			int off = trackN*4;
-			return data[off]*60+data[off+1]+data[off+2/SACD_FRAME_RATE];
+			int off = trackN * 4;
+			return data[off] * 60 + data[off + 1] + data[off + 2 / SACD_FRAME_RATE];
 		}
-		
+
 		int getDuration(int trackN) {
-			int off = 255*4+trackN*4;
-			return data[off]*60+data[off+1]+data[off+2/SACD_FRAME_RATE];
+			int off = 255 * 4 + trackN * 4;
+			return data[off] * 60 + data[off + 1] + data[off + 2 / SACD_FRAME_RATE];
 		}
 	}
-	
+
 }

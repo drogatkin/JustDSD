@@ -2,6 +2,7 @@ package org.justcodecs.dsd;
 
 import java.io.IOException;
 
+import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
 public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
@@ -14,6 +15,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 	int frmHdrSize;
 	int block = SACD_LSN_SIZE - frmHdrSize; // sectorSize 
 	byte[] header;
+	int currentFrame;
+	DSTDecoder dst;
+	byte[] dstBuff;
 
 	@Override
 	public void init(DSDStream ds) throws DecodeException {
@@ -38,8 +42,10 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				if (!atoc.stereo)
 					throw new DecodeException("No two channels tracks found", null);
 			}
-			if (atoc.frame_format == FRAME_FORMAT_DST)
-				throw new DecodeException("DST compression isn't supported", null);
+			if (atoc.frame_format == FRAME_FORMAT_DST) {
+				dst = new DSTDecoder();
+				//throw new DecodeException("DST compression isn't supported yet", null);
+			}
 			if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_16)
 				frmHdrSize = 284;
 			else if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_14)
@@ -73,7 +79,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				ttx.infos[i].start = tm.getStart(i);
 				ttx.infos[i].duration = tm.getDuration(i);
 			}
-			trackDuration = tm.getStart(ttx.infos.length-1) + tm.getDuration(ttx.infos.length-1);
+			trackDuration = tm.getStart(ttx.infos.length - 1) + tm.getDuration(ttx.infos.length - 1);
 			attrs.put("Artist", ctx.textInfo.get("album_artist"));
 			attrs.put("Title", ctx.textInfo.get("disc_title"));
 			attrs.put("Album", ctx.textInfo.get("album_title"));
@@ -87,37 +93,55 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 
 	@Override
 	boolean readDataBlock() throws DecodeException {
-		long end = (long) (atoc.track_end+1) * sectorSize;
+		if (dst != null) {
+			readDSTDataBlock();
+			return true;
+		}
+		if (currentFrame > (atoc.track_end - atoc.track_start))
+			return false;
 		try {
-			if (dsdStream.getFilePointer() >= end)
-				return false;
 			if (bufPos < 0)
 				bufPos = 0;
 			int delta = bufEnd - bufPos;
 
 			if (delta > 0)
 				System.arraycopy(buff, bufPos, buff, 0, delta);
-			int toRead = block;
-			if (toRead > end - dsdStream.getFilePointer())
-				toRead = (int) (end - dsdStream.getFilePointer());
-			// header[0] -> audioheader as
-			//   packet_info_count will follow of size AUDIO_PACKET_INFO_SIZE each
-			//  and then frame_info_count of AUDIO_FRAME_INFO_SIZE - 1
-			/*byte  packet_info_count = (byte) ((header[0] >> 5) & 7);
-			byte  frame_info_count = (byte) ((header[0] >> 2) & 7);
-			boolean dst_encoded   = (header[0] & 0x01) == 1;
-			System.out.printf("Frame header packets %d frames %d dst %b, total %d raw %x%n", packet_info_count, frame_info_count, dst_encoded,
-					1+packet_info_count*AUDIO_PACKET_INFO_SIZE+ frame_info_count*AUDIO_FRAME_INFO_SIZE, header[0]);
-			if (!dst_encoded)
-				throw new DecodeException("", null);*/
 			dsdStream.readFully(header, 0, header.length);
-			dsdStream.readFully(buff, delta, toRead);
+			dsdStream.readFully(buff, delta, block);
+			currentFrame++;
 			bufPos = 0;
-			bufEnd = toRead + delta;
+			bufEnd = block + delta;
 		} catch (IOException e) {
 			throw new DecodeException("IO exception at reading samples", e);
 		}
 		return true;
+	}
+	
+	void readDSTDataBlock() throws DecodeException {
+		try {
+			//dsdStream.seek(0x800*1 + dsdStream.getFilePointer());
+			System.out.printf("Read from 0%x%n", dsdStream.getFilePointer());
+			FrmHeader fh = new FrmHeader();
+			fh.read(dsdStream);
+			System.out.printf("%s%n", fh);
+			//dsdStream.readFully(dstBuff, 0, 1);
+			for (int f=0; f<fh.packet_info_count; f++) {
+			dsdStream.readFully(dstBuff, 0, fh.getPackLen(f));
+			System.out.printf("Pos at end 0%x%n", dsdStream.getFilePointer());
+			//dsdStream.readFully(dstBuff, 0, 8);
+			//dsdStream.readFully(dstBuff, 0, block);
+			if (fh.getDataType(f) != DATA_TYPE_AUDIO)
+				continue;
+			dst.FramDSTDecode(dstBuff, buff, fh.getPackLen(f), f);
+			}
+			//System.out.printf("Pos at end 0%x%n", dsdStream.getFilePointer());
+			bufPos = 0;
+			bufEnd = dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;
+		} catch (DSTException e) {
+			throw new DecodeException("Problem in DST decoding", e);
+		} catch (IOException e) {
+			throw new DecodeException("I/O problem", e);
+		}
 	}
 
 	@Override
@@ -132,7 +156,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 		if (atoc == null)
 			return 0;
 		if (trackDuration > 0)
-			return (long)trackDuration*getSampleRate();
+			return (long) trackDuration * getSampleRate();
 		return (long) (atoc.minutes * 60 + atoc.seconds + atoc.frames / SACD_FRAME_RATE) * getSampleRate();
 	}
 
@@ -145,10 +169,20 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 
 	@Override
 	void initBuffers(int overrun) {
-		if (frmHdrSize == 0)
+		if (frmHdrSize == 0 && dst == null)
 			throw new IllegalStateException("Area TOC wasn't processed yet");
 		block = SACD_LSN_SIZE - frmHdrSize;
-		buff = new byte[(block + overrun) * getNumChannels()];
+		if (dst == null)
+			buff = new byte[block + (overrun * getNumChannels())];
+		else {
+			dstBuff = new byte[block];			
+			try {
+				dst.init(atoc.channel_count, atoc.sample_frequency/44100);
+			} catch (DSTException e) {
+				throw new RuntimeException("Can't initialize decoder", e);
+			}
+			buff = new byte[dst.FrameHdr.MaxFrameLen*dst.FrameHdr.NrOfChannels];
+		}
 		header = new byte[frmHdrSize];
 	}
 
@@ -169,10 +203,10 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				dsdStream.seek(atoc.track_start * sectorSize);
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()) {
 				if (true) {
-					long off = sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount();
-					dsdStream.seek((long) (atoc.track_start + off) * sectorSize);
-					System.out.printf("Seek %ds,  len %db, tot %ds%n", sampleNum / getSampleRate(), atoc.track_end
-							- atoc.track_start, getSampleCount() / getSampleRate());
+					currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
+					dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
+					//System.out.printf("Seek %ds,  len %db, tot %ds%n", sampleNum / getSampleRate(), atoc.track_end
+					//	- atoc.track_start, getSampleCount() / getSampleRate());
 				} else {
 					// no accuracy for position in block
 					//block * 8 / getNumChannels();
