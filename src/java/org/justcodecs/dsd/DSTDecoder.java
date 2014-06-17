@@ -1428,16 +1428,15 @@ public class DSTDecoder {
 		} else {
 			System.out.printf("Processing dst frame%n");
 			ReadSegmentData(S, FrameHdr);
-			System.out.printf("ReadSegmentData %d%n", S.get_in_bitcount());
+			
 			ReadMappingData(S, FrameHdr);
-			System.out.printf("ReadMappingData %d%n", S.get_in_bitcount());
+			
 			ReadFilterCoefSets(S, FrameHdr.NrOfChannels, FrameHdr, StrFilter);
-			System.out.printf("ReadFilterCoefSets %d  nf %d%n", S.get_in_bitcount(), FrameHdr.NrOfFilters);
+			
 			ReadProbabilityTables(S, FrameHdr, StrPtable, P_one);
-			//S.FIO_BitGetIntUnsigned(2);
-			System.out.printf("ReadProbabilityTables %d%n", S.get_in_bitcount());
+			
 			ADataLen = (int) (FrameHdr.CalcNrOfBits - S.get_in_bitcount());
-			System.out.printf("Read arithmetic %d, %d-%d%n", ADataLen, FrameHdr.CalcNrOfBits, S.get_in_bitcount());
+			
 			ReadArithmeticCodedData(S, ADataLen, AData);
 		}
 	}

@@ -335,11 +335,16 @@ public interface Scarletbook {
 				throw new DecodeException("I/O", e);
 			}
 		}
+		
+		int getSize() {
+			return 1 + AUDIO_PACKET_INFO_SIZE * packet_info_count
+					+ (dst ? AUDIO_FRAME_DST_INFO_SIZE : AUDIO_FRAME_INFO_SIZE) * frame_info_count;
+		}
 
 		int getPackLen(int pacNo) {
 			if (pacNo < 0 || pacNo >= packet_info_count)
 				return -1;
-			return buf[1 + pacNo * 2 + 1] + ((buf[1 + pacNo * 2] & 7) << 8);
+			return  ((buf[1 + pacNo * 2] & 7) << 8) | (buf[1 + pacNo * 2 + 1] & 255);
 		}
 
 		int getDataType(int pacNo) {
