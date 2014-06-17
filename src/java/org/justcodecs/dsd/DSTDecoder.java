@@ -243,6 +243,7 @@ public class DSTDecoder {
 		byte FIO_BitGetChrUnsigned(int Len) throws DSTException {
 			if (Len > 0) {
 				getbits(tmp, Len);
+				//System.out.printf("CharU %d - %d%n", tmp[0], (byte) tmp[0]);
 				return (byte) tmp[0];
 			} else if (Len == 0) {
 				return 0;
@@ -270,6 +271,7 @@ public class DSTDecoder {
 		int FIO_BitGetIntUnsigned(int Len) throws DSTException {
 			if (Len > 0) {
 				getbits(tmp, Len);
+				//System.out.printf("IntU %d - %d%n", tmp[0], (int) tmp[0]);
 				return (int) tmp[0];
 			} else if (Len == 0) {
 				return 0;
@@ -301,6 +303,7 @@ public class DSTDecoder {
 				if (x >= (1 << (Len - 1))) {
 					x -= (1 << Len);
 				}
+				//System.out.printf("Int %d = %d%n", tmp[0], x);
 				return x;
 			} else if (Len == 0) {
 				return 0;
@@ -332,6 +335,7 @@ public class DSTDecoder {
 				if (x >= (1 << (Len - 1))) {
 					x -= (1 << Len);
 				}
+				//System.out.printf("Short %x = %d / %d%n", tmp[0], x, Len);
 				return x;
 			} else if (Len == 0) {
 				return 0;
@@ -359,6 +363,7 @@ public class DSTDecoder {
 			if (out_bitptr == 1) {
 				if (BitPosition == 0) {
 					DataByte = pDSTdata[ByteCounter++];
+					//System.out.printf("0x%x ", DataByte);
 					if (ByteCounter > TotalBytes) {
 						throw new DSTException("EOF", -1); /* EOF */
 					}
@@ -376,6 +381,7 @@ public class DSTDecoder {
 
 				if (BitPosition == 0) {
 					DataByte = pDSTdata[ByteCounter++];
+					//System.out.printf("0x%x ", DataByte);
 					if (ByteCounter > TotalBytes) {
 						throw new DSTException("EOF", -1); /* EOF *//* EOF */
 					}
@@ -744,10 +750,9 @@ public class DSTDecoder {
 			while (EndOfChannel == 0) {
 				if (SegNr >= MaxNrOfSegs) {
 					throw new DSTException("Too many segments for this channel!", -1);
-
 				}
 				if (ResolRead == 0) {
-					NrOfBits = (int) Log2RoundUp(FrameLen - MinSegLen / 8); // Log2RoundUp
+					NrOfBits = Log2RoundUp(FrameLen - MinSegLen / 8); // Log2RoundUp
 					Seg.Resolution = SD.FIO_BitGetIntUnsigned(NrOfBits);
 					if ((Seg.Resolution == 0) || (Seg.Resolution > FrameLen - MinSegLen / 8)) {
 						throw new DSTException("Invalid segment resolution!", -1);
@@ -755,7 +760,7 @@ public class DSTDecoder {
 					}
 					ResolRead = 1;
 				}
-				NrOfBits = (int) Log2RoundUp(MaxSegSize / Seg.Resolution);
+				NrOfBits = Log2RoundUp(MaxSegSize / Seg.Resolution);
 				Seg.SegmentLen[0][SegNr] = SD.FIO_BitGetIntUnsigned(NrOfBits);
 
 				if ((Seg.Resolution * 8 * Seg.SegmentLen[0][SegNr] < MinSegLen)
@@ -786,22 +791,20 @@ public class DSTDecoder {
 				EndOfChannel = SD.FIO_BitGetIntUnsigned(1);
 				if (EndOfChannel == 0) {
 					if (ResolRead == 0) {
-						NrOfBits = (int) Log2RoundUp(FrameLen - MinSegLen / 8);
+						NrOfBits = Log2RoundUp(FrameLen - MinSegLen / 8);
 						Seg.Resolution = SD.FIO_BitGetIntUnsigned(NrOfBits);
 						if ((Seg.Resolution == 0) || (Seg.Resolution > FrameLen - MinSegLen / 8)) {
 							throw new DSTException("Invalid segment resolution!", -1);
-
 						}
 						ResolRead = 1;
 					}
-					NrOfBits = (int) Log2RoundUp(MaxSegSize / Seg.Resolution);
+					NrOfBits = Log2RoundUp(MaxSegSize / Seg.Resolution);
 					Seg.SegmentLen[ChNr][SegNr] = SD.FIO_BitGetIntUnsigned(NrOfBits);
 
 					if ((Seg.Resolution * 8 * Seg.SegmentLen[ChNr][SegNr] < MinSegLen)
 							|| (Seg.Resolution * 8 * Seg.SegmentLen[ChNr][SegNr] > FrameLen * 8 - DefinedBits
 									- MinSegLen)) {
 						throw new DSTException("Invalid segment length!", -1);
-
 					}
 					DefinedBits += Seg.Resolution * 8 * Seg.SegmentLen[ChNr][SegNr];
 					MaxSegSize -= Seg.Resolution * Seg.SegmentLen[ChNr][SegNr];
@@ -854,8 +857,7 @@ public class DSTDecoder {
 		for (ChNr = 0; ChNr < FH.NrOfChannels; ChNr++) {
 			dst[ChNr] = src[ChNr];
 			if (dst[ChNr] > MAXNROF_PSEGS) {
-				throw new DSTException("ERROR: Too many segments!", -1);
-
+				throw new DSTException("Too many segments!", -1);
 			}
 			if (dst[ChNr] != dst[0]) {
 				FH.PSameSegAllCh = 0;
@@ -866,7 +868,6 @@ public class DSTDecoder {
 				lendst[SegNr] = lensrc[SegNr];
 				if ((lendst[SegNr] != 0) && (FH.PSeg.Resolution * 8 * lendst[SegNr] < MIN_PSEG_LEN)) {
 					throw new DSTException("ERROR: Invalid segment length!", -1);
-
 				}
 				if (lendst[SegNr] != FH.PSeg.SegmentLen[0][SegNr]) {
 					FH.PSameSegAllCh = 0;
@@ -895,7 +896,6 @@ public class DSTDecoder {
 
 		FH.PSameSegAsF = SD.FIO_BitGetIntUnsigned(1);
 		ReadTableSegmentData(SD, FH.NrOfChannels, FH.MaxFrameLen, MAXNROF_FSEGS, MIN_FSEG_LEN, true, FH); // ->
-
 		if (FH.PSameSegAsF == 1) {
 			CopySegmentData(FH);
 		} else {
@@ -931,21 +931,22 @@ public class DSTDecoder {
 		Seg.Table4Segment[0][0] = 0;
 
 		int SameMapAllCh = SD.FIO_BitGetIntUnsigned(1);
+		
 		if (SameMapAllCh == 1) {
 			for (SegNr = 1; SegNr < Seg.NrOfSegments[0]; SegNr++) {
-				NrOfBits = (int) Log2RoundUp(CountTables);
+				NrOfBits = Log2RoundUp(CountTables);
+				
 				Seg.Table4Segment[0][SegNr] = SD.FIO_BitGetIntUnsigned(NrOfBits);
 
 				if (Seg.Table4Segment[0][SegNr] == CountTables) {
 					CountTables++;
 				} else if (Seg.Table4Segment[0][SegNr] > CountTables) {
-					throw new DSTException("ERROR: Invalid table number for segment!", -1);
-
+					throw new DSTException("Invalid table number for segment!", -1);
 				}
 			}
 			for (ChNr = 1; ChNr < NrOfChannels; ChNr++) {
 				if (Seg.NrOfSegments[ChNr] != Seg.NrOfSegments[0]) {
-					throw new DSTException("ERROR: Mapping can't be the same for all channels!", -1);
+					throw new DSTException("Mapping can't be the same for all channels!", -1);
 				}
 				for (SegNr = 0; SegNr < Seg.NrOfSegments[0]; SegNr++) {
 					Seg.Table4Segment[ChNr][SegNr] = Seg.Table4Segment[0][SegNr];
@@ -955,7 +956,7 @@ public class DSTDecoder {
 			for (ChNr = 0; ChNr < NrOfChannels; ChNr++) {
 				for (SegNr = 0; SegNr < Seg.NrOfSegments[ChNr]; SegNr++) {
 					if ((ChNr != 0) || (SegNr != 0)) {
-						NrOfBits = (int) Log2RoundUp(CountTables);
+						NrOfBits = Log2RoundUp(CountTables);
 						Seg.Table4Segment[ChNr][SegNr] = SD.FIO_BitGetIntUnsigned(NrOfBits);
 
 						if (Seg.Table4Segment[ChNr][SegNr] == CountTables) {
@@ -968,8 +969,7 @@ public class DSTDecoder {
 			}
 		}
 		if (CountTables > MaxNrOfTables) {
-			throw new DSTException("ERROR: Too many tables for this frame!", -1);
-
+			throw new DSTException("Too many tables for this frame!", -1);
 		}
 		if (filters) {
 			FH.NrOfFilters = CountTables;
@@ -1012,13 +1012,12 @@ public class DSTDecoder {
 					}
 				}
 			} else {
-				throw new DSTException("ERROR: Not same number of segments for filters and Ptables!", -1);
+				throw new DSTException("Not same number of segments for filters and Ptables!", -1);
 			}
 		}
 		FH.NrOfPtables = FH.NrOfFilters;
 		if (FH.NrOfPtables > FH.MaxNrOfPtables) {
-			throw new DSTException("ERROR: Too many tables for this frame!", -1);
-
+			throw new DSTException("Too many tables for this frame!", -1);
 		}
 	}
 
@@ -1047,7 +1046,6 @@ public class DSTDecoder {
 		FH.PSameMapAsF = SD.FIO_BitGetIntUnsigned(1);
 
 		ReadTableMappingData(SD, FH.NrOfChannels, FH.MaxNrOfFilters, true, FH);
-
 		if (FH.PSameMapAsF == 1) {
 			CopyMappingData(FH);
 		} else {
@@ -1057,7 +1055,6 @@ public class DSTDecoder {
 		for (j = 0; j < FH.NrOfChannels; j++) {
 			FH.HalfProb[j] = SD.FIO_BitGetIntUnsigned(1);
 		}
-
 	}
 
 	/***************************************************************************/
@@ -1142,11 +1139,11 @@ public class DSTDecoder {
 		for (FilterNr = 0; FilterNr < FH.NrOfFilters; FilterNr++) {
 			FH.PredOrder[FilterNr] = SD.FIO_BitGetIntUnsigned(SIZE_CODEDPREDORDER);
 			FH.PredOrder[FilterNr]++;
-
 			CF.Coded[FilterNr] = SD.FIO_BitGetIntUnsigned(1);
 			if (CF.Coded[FilterNr] == 0) {
 				CF.BestMethod[FilterNr] = -1;
 				for (CoefNr = 0; CoefNr < FH.PredOrder[FilterNr]; CoefNr++) {
+					System.out.printf("-->%d%n", CoefNr);
 					FH.ICoefA[FilterNr][CoefNr] = SD.FIO_BitGetShortSigned(SIZE_PREDCOEF);
 				}
 			} else {
@@ -1155,8 +1152,7 @@ public class DSTDecoder {
 				CF.BestMethod[FilterNr] = SD.FIO_BitGetIntUnsigned(SIZE_RICEMETHOD);
 				bestmethod = CF.BestMethod[FilterNr];
 				if (CF.CPredOrder[bestmethod] >= FH.PredOrder[FilterNr]) {
-					throw new DSTException("ERROR: Invalid coefficient coding method!", -1);
-
+					throw new DSTException("Invalid coefficient coding method!", -1);
 				}
 
 				for (CoefNr = 0; CoefNr < CF.CPredOrder[bestmethod]; CoefNr++) {
@@ -1177,8 +1173,7 @@ public class DSTDecoder {
 					}
 
 					if ((c < -(1 << (SIZE_PREDCOEF - 1))) || (c >= (1 << (SIZE_PREDCOEF - 1)))) {
-						throw new DSTException("ERROR: filter coefficient out of range!", -1);
-
+						throw new DSTException("filter coefficient out of range!", -1);
 					} else {
 						FH.ICoefA[FilterNr][CoefNr] = (short) c;
 					}
@@ -1186,9 +1181,8 @@ public class DSTDecoder {
 			}
 
 			/* Clear out remaining coeffs, as the SSE2 code uses them all. */
-			Arrays.fill(FH.ICoefA[FilterNr], CoefNr, FH.ICoefA[FilterNr].length,
-			//((1 << SIZE_CODEDPREDORDER) - CoefNr) /* FH.ICoefA[FilterNr].length-CoefNr*/,
-					(short) 0);
+			for (; FilterNr < FH.ICoefA.length; FilterNr++)
+				Arrays.fill(FH.ICoefA[FilterNr], (short) 0); // should do it for remaining in < FilterNr
 		}
 
 		for (ChNr = 0; ChNr < NrOfChannels; ChNr++) {
@@ -1222,19 +1216,16 @@ public class DSTDecoder {
 		int PtableNr;
 		int TapNr;
 		int x;
-
 		/* Read the data of all probability tables (table entries) */
 		for (PtableNr = 0; PtableNr < FH.NrOfPtables; PtableNr++) {
 			FH.PtableLen[PtableNr] = SD.FIO_BitGetIntUnsigned(AC_HISBITS);
 			FH.PtableLen[PtableNr]++;
-
 			if (FH.PtableLen[PtableNr] > 1) {
 				CP.Coded[PtableNr] = SD.FIO_BitGetIntUnsigned(1);
-
 				if (CP.Coded[PtableNr] == 0) {
 					CP.BestMethod[PtableNr] = -1;
 					for (EntryNr = 0; EntryNr < FH.PtableLen[PtableNr]; EntryNr++) {
-						P_one[PtableNr][EntryNr] = SD.FIO_BitGetIntUnsigned(AC_BITS);
+						P_one[PtableNr][EntryNr] = SD.FIO_BitGetIntUnsigned(AC_BITS - 1);
 						P_one[PtableNr][EntryNr]++;
 					}
 				} else {
@@ -1262,8 +1253,8 @@ public class DSTDecoder {
 						} else {
 							c = RiceDecode(SD, CP.m[PtableNr][bestmethod]) + (-x + 3) / 8;
 						}
-						System.out.printf("best met %d %d %d%n", CP.m[PtableNr][bestmethod], x,
-								RiceDecode(SD, CP.m[PtableNr][bestmethod]));
+						//System.out.printf("best met %d %d %d%n", CP.m[PtableNr][bestmethod], x,
+							//	RiceDecode(SD, CP.m[PtableNr][bestmethod]));
 						if ((c < 1) || (c > (1 << (AC_BITS - 1)))) {
 							throw new DSTException(String.format("Ptable entry (%d) out of range!", c), -1);
 						} else {
@@ -1295,8 +1286,13 @@ public class DSTDecoder {
 	/***************************************************************************/
 
 	void ReadArithmeticCodedData(StrData SD, int ADataLen, byte[] AData) throws DSTException {
-		int j;
-		for (j = 0; j < ADataLen; j++) {
+		if (ADataLen == 0)
+			return;
+		AData[0] = SD.FIO_BitGetChrUnsigned(1);
+		if (AData[0] != 0) {
+			throw new DSTException(String.format("Illegal arithmetic code in frame %d!", FrameHdr.FrameNr), -1);
+		}
+		for (int j = 1; j < ADataLen; j++) {
 			AData[j] = SD.FIO_BitGetChrUnsigned(1);
 		}
 	}
@@ -1369,6 +1365,7 @@ public class DSTDecoder {
 	}
 
 	void init(int NrChannels, int Fs44) throws DSTException {
+		System.out.printf("DST init %d at %d%n", NrChannels, Fs44);
 		S = new StrData();
 		FrameHdr = new FrameHeader();
 		FrameHdr.NrOfChannels = NrChannels;
@@ -1390,7 +1387,7 @@ public class DSTDecoder {
 		StrPtable = new CodedTable(FrameHdr);
 		StrFilter.TableType = FILTER;
 		StrPtable.TableType = PTABLE;
-		AData = new byte[(int) FrameHdr.BitStreamLen];
+		AData = new byte[(int) FrameHdr.BitStreamLen]; // TODO ALLOCATE WITH MAX POSSIB;E
 		P_one = new int[FrameHdr.MaxNrOfPtables][AC_HISMAX];
 		CCP_CalcInit(StrFilter);
 		CCP_CalcInit(StrPtable);
@@ -1437,14 +1434,11 @@ public class DSTDecoder {
 			ReadFilterCoefSets(S, FrameHdr.NrOfChannels, FrameHdr, StrFilter);
 			System.out.printf("ReadFilterCoefSets %d  nf %d%n", S.get_in_bitcount(), FrameHdr.NrOfFilters);
 			ReadProbabilityTables(S, FrameHdr, StrPtable, P_one);
+			//S.FIO_BitGetIntUnsigned(2);
 			System.out.printf("ReadProbabilityTables %d%n", S.get_in_bitcount());
 			ADataLen = (int) (FrameHdr.CalcNrOfBits - S.get_in_bitcount());
-			System.out.printf("Read ariphm %d, %d-%d%n", ADataLen, FrameHdr.CalcNrOfBits, S.get_in_bitcount());
+			System.out.printf("Read arithmetic %d, %d-%d%n", ADataLen, FrameHdr.CalcNrOfBits, S.get_in_bitcount());
 			ReadArithmeticCodedData(S, ADataLen, AData);
-
-			if ((ADataLen > 0) && (AData[0] != 0)) {
-				throw new DSTException(String.format("Illegal arithmetic code in frame %d!", FrameHdr.FrameNr), -1);
-			}
 		}
 	}
 
@@ -1482,9 +1476,9 @@ public class DSTDecoder {
 	}
 
 	int LT_RUN_FILTER_I(short[][] FilterTable, byte[] ChannelStatus) {
-		int Predict = FilterTable[0][ChannelStatus[0]];
+		int Predict = FilterTable[0][ChannelStatus[0] & 255];
 		for (int i = 1; i < 16; i++)
-			Predict += FilterTable[i][ChannelStatus[i]];
+			Predict += FilterTable[i][ChannelStatus[i] & 255];
 		return Predict;
 	}
 
@@ -1510,7 +1504,6 @@ public class DSTDecoder {
 		FrameHdr.FrameNr = FrameCnt;
 		FrameHdr.CalcNrOfBytes = FrameSizeInBytes;
 		FrameHdr.CalcNrOfBits = FrameHdr.CalcNrOfBytes * 8;
-		System.out.printf("Umpacking%n");
 		/* unpack DST frame: segmentation, mapping, arithmetic data */
 		UnpackDSTframe(DSTdata, MuxedDSDdata);
 

@@ -1,5 +1,6 @@
 package org.justcodecs.dsd;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.justcodecs.dsd.DSTDecoder.DSTException;
@@ -44,6 +45,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 			}
 			if (atoc.frame_format == FRAME_FORMAT_DST) {
 				dst = new DSTDecoder();
+				try {
+					dst.init(atoc.channel_count, atoc.sample_frequency/44100);
+				} catch (DSTException e) {
+					throw new DecodeException("Coudn't initialize DST decoder", e);
+				}
 				//throw new DecodeException("DST compression isn't supported yet", null);
 			}
 			if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_16)
@@ -127,6 +133,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 			//dsdStream.readFully(dstBuff, 0, 1);
 			for (int f=0; f<fh.packet_info_count; f++) {
 			dsdStream.readFully(dstBuff, 0, fh.getPackLen(f));
+			/*FileOutputStream fos = new FileOutputStream("test.dst");
+			fos.write(dstBuff, 0, fh.getPackLen(f));
+			fos.close();*/
 			System.out.printf("Pos at end 0%x%n", dsdStream.getFilePointer());
 			//dsdStream.readFully(dstBuff, 0, 8);
 			//dsdStream.readFully(dstBuff, 0, block);
@@ -175,12 +184,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 		if (dst == null)
 			buff = new byte[block + (overrun * getNumChannels())];
 		else {
-			dstBuff = new byte[block];			
-			try {
-				dst.init(atoc.channel_count, atoc.sample_frequency/44100);
-			} catch (DSTException e) {
-				throw new RuntimeException("Can't initialize decoder", e);
-			}
+			dstBuff = new byte[block];						
 			buff = new byte[dst.FrameHdr.MaxFrameLen*dst.FrameHdr.NrOfChannels];
 		}
 		header = new byte[frmHdrSize];
