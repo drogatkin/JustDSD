@@ -423,8 +423,20 @@ public class DSTDecoder {
 
 	}
 
+	static class DSTXBITSData {
+		int PBit;
+		byte Bit;
+		byte[] Data = new byte[MAX_DSTXBITS_SIZE];
+		int DataLen;
+	}
+
+	static class FirPtrData {
+		int[] Pnt;
+		int[][] Status;
+	}
+
 	static class ACData {
-		int Init;
+		int Init = 1;
 		int C;
 		int A;
 		int cbptr;
@@ -460,66 +472,77 @@ public class DSTDecoder {
 		/*                                                                         */
 		/***************************************************************************/
 
-		byte DST_ACDecodeBit(byte b, int p, byte[] cb, int fs, int Flush) {
-			/*
-			static unsigned int  Init = 1;
-			static unsigned int  C;
-			static unsigned int  A;
-			static int           cbptr;
-			*/
+		byte DST_ACDecodeBit(int p, byte[] cb, int fs, int Flush) {
 			int ap;
 			int h;
+			byte b;
 
-			if (Init == 1) {
-				Init = 0;
-				A = ONE - 1;
-				C = 0;
-				for (cbptr = 1; cbptr <= ABITS; cbptr++) {
-					C <<= 1;
-					if (cbptr < fs) {
-						C |= cb[cbptr];
-					}
-				}
-			}
-
-			if (Flush == 0) {
-				/* approximate (A * p) with "partial rounding". */
-				ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
-
-				h = A - ap;
-				if (C >= h) {
-					b = 0;
-					C -= h;
-					A = ap;
-				} else {
-					b = 1;
-					A = h;
-				}
-				while (A < HALF) {
-					A <<= 1;
-
-					/* Use new flushing technique; insert zero in LSB of C if reading past
-					   the end of the arithmetic code */
-					C <<= 1;
-					if (cbptr < fs) {
-						C |= cb[cbptr];
-					}
-					cbptr++;
-				}
-			} else {
-				Init = 1;
-				if (cbptr < fs - 7) {
-					b = 0;
-				} else {
-					b = 1;
-					while ((cbptr < fs) && (b == 1)) {
-						if (cb[cbptr] != 0) {
-							b = 1;
-						}
-						cbptr++;
-					}
-				}
-			}
+			  if (Init == 1)
+			  {
+			    Init = 0;
+			    A    = ONE - 1;
+			    C    = 0;
+			    for (cbptr = 1; cbptr <= ABITS; cbptr++)
+			    {
+			      C <<= 1;
+			      if (cbptr < fs)
+			      {
+			        C |= cb[cbptr];
+			      }
+			    }
+			  }
+			  
+			  if (Flush == 0)
+			  {
+			    /* approximate (A * p) with "partial rounding". */
+			    ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
+			    
+			    h = A - ap;
+			    if (C >= h)
+			    {
+			      b = 1;
+			      C -= h;
+			      A  = ap;
+			    }
+			    else
+			    {
+			      b = 0;
+			      A  = h;
+			    }
+			    while (A < HALF)
+			    {
+			      A <<= 1;
+			      
+			      /* Use new flushing technique; insert zero in LSB of C if reading past
+			         the end of the arithmetic code */
+			      C <<= 1;
+			      if (cbptr < fs)
+			      {
+			        C |= cb[cbptr];
+			      }
+			      cbptr++;
+			    }
+			  }
+			  else
+			  {
+			    Init = 1;
+			    b   = 0;
+			    if (cbptr < fs - 7)
+			    {
+			      b = 1;
+			    }
+			    else
+			    {
+			      while ((b == 0) && (cbptr < fs))
+			      {
+			        if (cb[cbptr] != 0)
+			        {
+			          b = 1;
+			        }
+			        cbptr++;
+			      }
+			    }
+			  }
 			return b;
 		}
 
@@ -554,14 +577,15 @@ public class DSTDecoder {
 			for (cbptr = 1; cbptr <= ABITS; cbptr++) {
 				C <<= 1;
 				if (cbptr < fs) {
-					C |= cb[cbptr];
+					C |= cb[cbptr] & 255;
 				}
 			}
 		}
 
-		byte LT_ACDecodeBit_Decode(byte b, int p, byte[] cb, int fs) {
+		int LT_ACDecodeBit_Decode(int p, byte[] cb, int fs) {
 			int ap;
 			int h;
+			int b;
 
 			/* approximate (A * p) with "partial rounding". */
 			ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
@@ -582,15 +606,16 @@ public class DSTDecoder {
 				    the end of the arithmetic code */
 				C <<= 1;
 				if (cbptr < fs) {
-					C |= cb[cbptr];
+					C |= cb[cbptr] & 255;
 				}
 				cbptr++;
 			}
 			return b;
 		}
 
-		byte LT_ACDecodeBit_Flush(byte b, int p, byte[] cb, int fs) {
+		int LT_ACDecodeBit_Flush(int p, byte[] cb, int fs) {
 			Init = 1;
+			int b;
 			if (cbptr < fs - 7) {
 				b = 0;
 			} else {
@@ -604,7 +629,6 @@ public class DSTDecoder {
 			}
 			return b;
 		}
-
 	}
 
 	FrameHeader FrameHdr; /* Contains frame based header information     */
@@ -617,7 +641,14 @@ public class DSTDecoder {
 	/* of a complete frame                         */
 	int ADataLen; /* Number of code bits contained in AData[]    */
 	StrData S; /* DST data stream */
-
+	DSTXBITSData DstXbits;
+	FirPtrData FirPtrs;
+	short[][] BitStream11; /* Contains the bitstream of a complete        */
+	/* frame. This array contains "bits" with      */
+	/* value -1 or 1                               */
+	byte[][] BitResidual; /* Contains the residual signal to be          */
+	/* applied to the arithmetic encoder           */
+	long[][] PredicVal;
 	int SSE2;
 
 	/***************************************************************************/
@@ -680,6 +711,45 @@ public class DSTDecoder {
 	static short Reverse7LSBs(short c) {
 		return reverse[(c + (1 << SIZE_PREDCOEF)) & 127];
 	}
+	
+	/***************************************************************************/
+	/*                                                                         */
+	/* name     : Reverse7LSBs                                                 */
+	/*                                                                         */
+	/* function : Take the 7 LSBs of a number consisting of SIZE_PREDCOEF bits */
+	/*            (2's complement), reverse the bit order and add 1 to it.     */
+	/*                                                                         */
+	/* pre      : c                                                            */
+	/*                                                                         */
+	/* post     : Returns the translated number                                */
+	/*                                                                         */
+	/***************************************************************************/
+
+	static int Reverse7LSBs(int c)
+	{
+	  int LSBs;
+	  int i;
+	  int p;
+	  
+	  if (c >= 0)
+	  {
+	    LSBs = c & 127;
+	  }
+	  else
+	  {
+	    LSBs = ((1 << SIZE_PREDCOEF) + c) & 127;
+	  }
+	  for (i = 0, p = 1; i < 7; i++)
+	  {
+	    if ((LSBs & (1 << i)) != 0)
+	    {
+	      p += 1 << (6 - i);
+	    }
+	  }
+	  
+	  return p;
+	}
+
 
 	/***************************************************************************/
 	/*                                                                         */
@@ -931,11 +1001,11 @@ public class DSTDecoder {
 		Seg.Table4Segment[0][0] = 0;
 
 		int SameMapAllCh = SD.FIO_BitGetIntUnsigned(1);
-		
+
 		if (SameMapAllCh == 1) {
 			for (SegNr = 1; SegNr < Seg.NrOfSegments[0]; SegNr++) {
 				NrOfBits = Log2RoundUp(CountTables);
-				
+
 				Seg.Table4Segment[0][SegNr] = SD.FIO_BitGetIntUnsigned(NrOfBits);
 
 				if (Seg.Table4Segment[0][SegNr] == CountTables) {
@@ -1143,8 +1213,9 @@ public class DSTDecoder {
 			if (CF.Coded[FilterNr] == 0) {
 				CF.BestMethod[FilterNr] = -1;
 				for (CoefNr = 0; CoefNr < FH.PredOrder[FilterNr]; CoefNr++) {
-					System.out.printf("-->%d%n", CoefNr);
+					
 					FH.ICoefA[FilterNr][CoefNr] = SD.FIO_BitGetShortSigned(SIZE_PREDCOEF);
+					//System.out.printf("ICoefA[%d][%d] = %d%n", FilterNr, CoefNr, FH.ICoefA[FilterNr][CoefNr]);
 				}
 			} else {
 				int bestmethod;
@@ -1157,6 +1228,7 @@ public class DSTDecoder {
 
 				for (CoefNr = 0; CoefNr < CF.CPredOrder[bestmethod]; CoefNr++) {
 					FH.ICoefA[FilterNr][CoefNr] = SD.FIO_BitGetShortSigned(SIZE_PREDCOEF);
+					//System.out.printf("ICoefA[%d][%d] = %d%n", FilterNr, CoefNr, FH.ICoefA[FilterNr][CoefNr]);
 				}
 
 				CF.m[FilterNr][bestmethod] = SD.FIO_BitGetIntUnsigned(SIZE_RICEM);
@@ -1176,13 +1248,14 @@ public class DSTDecoder {
 						throw new DSTException("filter coefficient out of range!", -1);
 					} else {
 						FH.ICoefA[FilterNr][CoefNr] = (short) c;
+						//System.out.printf("ICoefA[%d][%d] = %d%n", FilterNr, CoefNr, FH.ICoefA[FilterNr][CoefNr]);
 					}
 				}
 			}
 
 			/* Clear out remaining coeffs, as the SSE2 code uses them all. */
-			for (; FilterNr < FH.ICoefA.length; FilterNr++)
-				Arrays.fill(FH.ICoefA[FilterNr], (short) 0); // should do it for remaining in < FilterNr
+			//for (; FilterNr < FH.ICoefA.length; FilterNr++)
+			//	Arrays.fill(FH.ICoefA[FilterNr], (short) 0); // should do it for remaining in < FilterNr
 		}
 
 		for (ChNr = 0; ChNr < NrOfChannels; ChNr++) {
@@ -1254,7 +1327,7 @@ public class DSTDecoder {
 							c = RiceDecode(SD, CP.m[PtableNr][bestmethod]) + (-x + 3) / 8;
 						}
 						//System.out.printf("best met %d %d %d%n", CP.m[PtableNr][bestmethod], x,
-							//	RiceDecode(SD, CP.m[PtableNr][bestmethod]));
+						//	RiceDecode(SD, CP.m[PtableNr][bestmethod]));
 						if ((c < 1) || (c > (1 << (AC_BITS - 1)))) {
 							throw new DSTException(String.format("Ptable entry (%d) out of range!", c), -1);
 						} else {
@@ -1391,6 +1464,13 @@ public class DSTDecoder {
 		P_one = new int[FrameHdr.MaxNrOfPtables][AC_HISMAX];
 		CCP_CalcInit(StrFilter);
 		CCP_CalcInit(StrPtable);
+		DstXbits = new DSTXBITSData();
+		FirPtrs = new FirPtrData();
+		FirPtrs.Pnt = new int[FrameHdr.NrOfChannels];
+		FirPtrs.Status = new int[FrameHdr.NrOfChannels][(1 << SIZE_CODEDPREDORDER)];
+		BitStream11 = new short[FrameHdr.NrOfChannels][(int) FrameHdr.NrOfBitsPerCh];
+		BitResidual = new byte[FrameHdr.NrOfChannels][(int) FrameHdr.NrOfBitsPerCh];
+		PredicVal = new long[FrameHdr.NrOfChannels][(int) FrameHdr.NrOfBitsPerCh];
 	}
 
 	/***************************************************************************/
@@ -1418,7 +1498,7 @@ public class DSTDecoder {
 		if (FrameHdr.DSTCoded == 0) { // DSD data
 			Dummy = S.FIO_BitGetIntUnsigned(1); /* Was &D->DstXbits.Bit, but it was never used */
 			Dummy = S.FIO_BitGetIntUnsigned(6);
-			System.out.printf("Dummy %x%n", Dummy);
+			//System.out.printf("Dummy %x%n", Dummy);
 			if (Dummy != 0) {
 				throw new DSTException(String.format("Illegal stuffing pattern in frame %d!", FrameHdr.FrameNr), 0);
 			}
@@ -1426,17 +1506,17 @@ public class DSTDecoder {
 			/* Read DSD data and put in output stream */
 			ReadDSDframe(S, FrameHdr.MaxFrameLen, FrameHdr.NrOfChannels, DSDdataframe);
 		} else {
-			System.out.printf("Processing dst frame%n");
+			//System.out.printf("Processing dst frame%n");
 			ReadSegmentData(S, FrameHdr);
-			
+
 			ReadMappingData(S, FrameHdr);
-			
+
 			ReadFilterCoefSets(S, FrameHdr.NrOfChannels, FrameHdr, StrFilter);
-			
+
 			ReadProbabilityTables(S, FrameHdr, StrPtable, P_one);
-			
+
 			ADataLen = (int) (FrameHdr.CalcNrOfBits - S.get_in_bitcount());
-			
+
 			ReadArithmeticCodedData(S, ADataLen, AData);
 		}
 	}
@@ -1495,10 +1575,14 @@ public class DSTDecoder {
 	void FramDSTDecode(byte[] DSTdata, byte[] MuxedDSDdata, int FrameSizeInBytes, int FrameCnt) throws DSTException {
 		int BitNr;
 		int ChNr;
-		byte ACError = 0;
+		int ACError = 0;
 		int NrOfBitsPerCh = (int) FrameHdr.NrOfBitsPerCh;
 		int NrOfChannels = FrameHdr.NrOfChannels;
 		byte[] MuxedDSD = MuxedDSDdata;
+		short PredicBit;
+		int PtableIndex;
+		int Stop;
+		byte BitMask[] = new byte[RESOL];
 
 		FrameHdr.FrameNr = FrameCnt;
 		FrameHdr.CalcNrOfBytes = FrameSizeInBytes;
@@ -1507,67 +1591,113 @@ public class DSTDecoder {
 		UnpackDSTframe(DSTdata, MuxedDSDdata);
 
 		if (FrameHdr.DSTCoded == 1) {
-			System.out.printf("Decoding%n");
+			//System.out.printf("Decoding%n");
+			int i;
 			ACData AC = new ACData();
-			short[][][] LT_ICoefI = new short[2 * MAX_CHANNELS][16][256];
-			//short[][][] LT_ICoefU = new short[2 * MAX_CHANNELS][16][256];
-			byte[][] LT_Status = new byte[MAX_CHANNELS][16];
-			FillTable4Bit(NrOfChannels, NrOfBitsPerCh, FrameHdr.FSeg, FrameHdr.Filter4Bit);
-			FillTable4Bit(NrOfChannels, NrOfBitsPerCh, FrameHdr.PSeg, FrameHdr.Ptable4Bit);
+			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.FSeg, FrameHdr.Filter4Bit);
+			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.PSeg, FrameHdr.Ptable4Bit);
 
-			LT_InitCoefTablesI(LT_ICoefI);
-			//LT_InitCoefTablesU(D, LT_ICoefU);
-			LT_InitStatus(LT_Status);
+			DstXbits.PBit = Reverse7LSBs(FrameHdr.ICoefA[0][0]);
+			//System.out.printf("revers of %x is %x%n", FrameHdr.ICoefA[0][0], DstXbits.PBit);
 
-			AC.LT_ACDecodeBit_Init(AData, ADataLen);
-			ACError = AC.LT_ACDecodeBit_Decode(ACError, Reverse7LSBs(FrameHdr.ICoefA[0][0]), AData, ADataLen);
-			Arrays.fill(MuxedDSD, 0, NrOfBitsPerCh * NrOfChannels / 8, (byte) 0);
+			DstXbits.Bit = AC.DST_ACDecodeBit(DstXbits.PBit, AData, ADataLen, 0);
 
-			for (BitNr = 0; BitNr < NrOfBitsPerCh; BitNr++) {
-				int ByteNr = BitNr / 8;
+			/* Initialise the Pnt and Status pointers for each channel */
+			for (ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++) {
+				for (i = 0; i < (1 << SIZE_CODEDPREDORDER); i++) {
+					FirPtrs.Status[ChNr][i] = 2 * (i & 1) - 1;
+				}
+				FirPtrs.Pnt[ChNr] = 0;
+			}
 
-				for (ChNr = 0; ChNr < NrOfChannels; ChNr++) {
-					short Predict = 0;
-					short Residual = 0;
-					short BitVal;
-					byte Filter = FrameHdr.Filter4Bit[ChNr][BitNr];
-
+			/* Deinterleaving of the channels is incorporated in these two loops */
+			for (BitNr = 0; BitNr < FrameHdr.NrOfBitsPerCh; BitNr++) {
+				for (ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++) {
 					/* Calculate output value of the FIR filter */
-					LT_RUN_FILTER_I(LT_ICoefI[Filter], LT_Status[ChNr]);
-					//LT_RUN_FILTER_U(LT_ICoefU[Filter], LT_Status[ChNr]);
-					//Predict = LT_RunFilterI(LT_ICoefI[Filter], LT_Status[ChNr]);
-					//Predict = LT_RunFilterU(LT_ICoefU[Filter], LT_Status[ChNr]);
+					PredicVal[ChNr][BitNr] = 0;
+
+					Stop = FirPtrs.Pnt[ChNr] + FrameHdr.PredOrder[FrameHdr.Filter4Bit[ChNr][BitNr] & 255];
+					if (Stop > (1 << SIZE_CODEDPREDORDER)) {
+						Stop = (1 << SIZE_CODEDPREDORDER);
+					}
+					int j;
+					for (i = FirPtrs.Pnt[ChNr], j = 0; i < Stop; i++, j++) {
+						PredicVal[ChNr][BitNr] += FirPtrs.Status[ChNr][i]
+								* FrameHdr.ICoefA[FrameHdr.Filter4Bit[ChNr][BitNr]][j];
+					}
+					for (i = 0; i < FirPtrs.Pnt[ChNr] + FrameHdr.PredOrder[FrameHdr.Filter4Bit[ChNr][BitNr]]
+							- (1 << SIZE_CODEDPREDORDER); i++, j++) {
+						PredicVal[ChNr][BitNr] += FirPtrs.Status[ChNr][i]
+								* FrameHdr.ICoefA[FrameHdr.Filter4Bit[ChNr][BitNr]][j];
+					}
 
 					/* Arithmetic decode the incoming bit */
 					if ((FrameHdr.HalfProb[ChNr] == 1) && (BitNr < FrameHdr.NrOfHalfBits[ChNr])) {
-						Residual = AC.LT_ACDecodeBit_Decode((byte) Residual, AC_PROBS / 2, AData, ADataLen);
+						BitResidual[ChNr][BitNr] = AC.DST_ACDecodeBit(AC_PROBS / 2, AData, ADataLen, 0);
 					} else {
-						int table4bit = FrameHdr.Ptable4Bit[ChNr][BitNr];
-						int PtableIndex = LT_ACGetPtableIndex(Predict, FrameHdr.PtableLen[table4bit]);
+						PtableIndex = AC.DST_ACGetPtableIndex(PredicVal[ChNr][BitNr],
+								FrameHdr.PtableLen[FrameHdr.Ptable4Bit[ChNr][BitNr]]);
 
-						AC.LT_ACDecodeBit_Decode((byte) Residual, P_one[table4bit][PtableIndex], AData, ADataLen);
+						BitResidual[ChNr][BitNr] = AC.DST_ACDecodeBit(
+								P_one[FrameHdr.Ptable4Bit[ChNr][BitNr] & 255][PtableIndex], AData, ADataLen, 0);
 					}
 
 					/* Channel bit depends on the predicted bit and BitResidual[][] */
-					BitVal = (short) (((((short) Predict) >> 15) ^ Residual) & 1);
+					PredicBit = (short) (PredicVal[ChNr][BitNr] >= 0?1:-1);
 
-					/* Shift the result into the correct bit position */
-					MuxedDSD[ByteNr * NrOfChannels + ChNr] |= (byte) (BitVal << (7 - BitNr % 8));
+					if (BitResidual[ChNr][BitNr] == 1) {
+						BitStream11[ChNr][BitNr] = (short) (-PredicBit);
+					} else {
+						BitStream11[ChNr][BitNr] = PredicBit;
+					}
 
 					/* Update filter */
-					for (int i = 15; i > 0; i--) {
-						LT_Status[ChNr][i] = (byte) ((LT_Status[ChNr][i] << 1) | ((LT_Status[ChNr][i] >> 7) & 1));
+					FirPtrs.Pnt[ChNr]--;
+					if (FirPtrs.Pnt[ChNr] < 0) {
+						FirPtrs.Pnt[ChNr] += (1 << SIZE_CODEDPREDORDER);
 					}
-					LT_Status[ChNr][0] = (byte) ((LT_Status[ChNr][0] << 1) | BitVal);
+
+					FirPtrs.Status[ChNr][FirPtrs.Pnt[ChNr]] = BitStream11[ChNr][BitNr];
 				}
 			}
-
 			/* Flush the arithmetic decoder */
-			ACError = AC.LT_ACDecodeBit_Flush((byte) ACError, 0, AData, ADataLen);
+			ACError = AC.DST_ACDecodeBit(0, AData, ADataLen, 1);
 
-			if (ACError != 1) {
+			if (ACError != 0) {
 				throw new DSTException("Arithmetic decoding error!", -1);
 			}
+
+			/* Reshuffle bits from BitStream11 to DsdFrame such, that DsdFrame is
+			 * arranged according the DSDIFF (DSD) output format
+			 */
+
+			/* Fill BitMask array (1, 2, 4, 8, 16, 32, 64, 128) */
+			for (BitNr = 0; BitNr < 8; BitNr++) {
+				BitMask[BitNr] = (byte) ((1 << BitNr) & 255);
+			}
+			int ByteNr;
+			int ByteIndexNr;
+			int BitIndexNr=0;
+			for (ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++) {
+				for (ByteNr = 0; ByteNr < FrameHdr.NrOfBitsPerCh / 8; ByteNr++) {
+					ByteIndexNr = ByteNr * FrameHdr.NrOfChannels + ChNr;
+					/* Reset all bits of the byte */
+					MuxedDSDdata[ByteIndexNr] = 0;
+
+					/* Set the apprioprate bits of each DF[] */
+					BitIndexNr = ByteNr * 8;
+					for (BitNr = 7; BitNr >= 0; BitNr--, BitIndexNr++) {
+						if (BitStream11[ChNr][BitIndexNr] == 1) {
+							MuxedDSDdata[ByteIndexNr] |= BitMask[BitNr];
+							//System.out.printf("mux %x[%d] of %x <%d>, [%d]%n", MuxedDSDdata[ByteIndexNr],ByteIndexNr, BitMask[BitNr],ChNr, ByteNr);
+						}
+					}
+				}
+			}
+			//System.out.printf("mux%s%n", Utils.toHexString(0, 100, MuxedDSDdata));
+			//System.out.printf("bm:%s%n", Utils.toHexString(0, BitStream11[0].length, BitStream11[0]));
+//if (BitIndexNr > 0) throw new DSTException("Stop!", -1);
+
 		}
 	}
 

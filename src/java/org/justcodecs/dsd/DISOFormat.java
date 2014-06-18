@@ -135,36 +135,38 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 			try {
 				if (dstStart) {
 					dstStart = false;
-					System.out.printf("Reading header at %x %n", dsdStream.getFilePointer());
+					//System.out.printf("Reading header at %x %n", dsdStream.getFilePointer());
 					frmHeader = new FrmHeader();
 					frmHeader.read(dsdStream);
-					System.out.printf("header: %s%n", frmHeader);
+					//System.out.printf("header: %s%n", frmHeader);
 					if (frmHeader.packet_info_count > 0) {
 						hdrIdx = 0;
 					} else {
 						dstStart = true;
 						dsdStream.readFully(dstPakBuf, 0, SACD_LSN_SIZE - frmHeader.getSize());
-						System.out.printf("moved to %d%n", dsdStream.getFilePointer());
+						//System.out.printf("moved to %d%n", dsdStream.getFilePointer());
 						continue;
 					}
 				}
 				if (frmHeader.isFrameStart(hdrIdx)) {
 					// completing current buffer
 					if (dstLen > 0) { // complete previous
-						System.out.printf("Decoding 0x%x %x %x %x%n", dstBuff[0], dstBuff[1], dstBuff[2], dstBuff[3]);
+						//System.out.printf("Decoding 0x%x %x %x %x%n", dstBuff[0], dstBuff[1], dstBuff[2], dstBuff[3]);
 						int delta = bufPos<0?0:bufEnd - bufPos;
 						dst.FramDSTDecode(dstBuff, dsdBuf, dstLen, lastFrm);
 						if (delta > 0)
 							System.arraycopy(buff, bufPos, buff, 0, delta);
-						System.out.printf("filling from %d for %d bytes%n", delta, dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels);
-						System.arraycopy(dsdBuf, 0, buff, delta, dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels);
+						//System.out.printf("filling from %d for %d bytes%n", delta, dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels);
+						//int dsdLen = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
+						int dsdLen=dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;
+						System.arraycopy(dsdBuf, 0, buff, delta, dsdLen);
 						bufPos = 0;
-						bufEnd = delta + dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;
+						bufEnd = delta + dsdLen;
 						dstLen = 0;
 						return;
 					}
 				}
-				System.out.printf("adding to dst from %d, len %d, idx %d at %x%n", dstLen, frmHeader.getPackLen(hdrIdx), hdrIdx, dsdStream.getFilePointer()); 
+				//System.out.printf("adding to dst from %d, len %d, idx %d at %x%n", dstLen, frmHeader.getPackLen(hdrIdx), hdrIdx, dsdStream.getFilePointer()); 
 				dsdStream.readFully(dstBuff, dstLen, frmHeader.getPackLen(hdrIdx));
 				if (frmHeader.getDataType(hdrIdx) == 2)
 					dstLen += frmHeader.getPackLen(hdrIdx);
@@ -178,7 +180,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 						skip += frmHeader.getPackLen(i);
 					dsdStream.readFully(dstPakBuf, 0,
 							SACD_LSN_SIZE - frmHeader.getSize() - skip);
-					System.out.printf("skipping to %x using %d %d%n", dsdStream.getFilePointer(), SACD_LSN_SIZE - frmHeader.getSize() - skip, skip);
+					//System.out.printf("skipping to %x using %d %d%n", dsdStream.getFilePointer(), SACD_LSN_SIZE - frmHeader.getSize() - skip, skip);
 				}
 			} catch (DSTException e) {
 				throw new DecodeException("Problem in DST decoding", e);

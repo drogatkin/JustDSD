@@ -38,6 +38,9 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			if (toRead > frm.props.dsd.dataEnd - dsdStream.getFilePointer())
 				toRead = (int) (frm.props.dsd.dataEnd - dsdStream.getFilePointer());
 			dsdStream.readFully(buff, delta, toRead);
+			//System.out.printf("%s%n", Utils.toHexString(0, 100, buff));
+			//if (true)
+				//throw new DecodeException("test", null);
 			bufPos = 0;
 			bufEnd = toRead + delta;
 		} catch (IOException e) {

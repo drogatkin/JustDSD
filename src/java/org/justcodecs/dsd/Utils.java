@@ -77,4 +77,20 @@ public class Utils {
 		}
 
 	}
+	
+	public static String toHexString(int start, int len, byte...bytes) {
+		StringBuilder result = new StringBuilder();
+		result.append("0x");
+		for(int i=start; i<start+len; i++ )
+			result.append(String.format(" %x", bytes[i]));
+		return result.toString();
+	}
+	
+	public static String toHexString(int start, int len, short...shorts) {
+		StringBuilder result = new StringBuilder();
+		result.append("0x");
+		for(int i=start; i<start+len; i++ )
+			result.append(String.format(" %x", shorts[i]));
+		return result.toString();
+	}
 }
