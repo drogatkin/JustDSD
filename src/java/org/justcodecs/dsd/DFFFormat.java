@@ -1,5 +1,7 @@
 package org.justcodecs.dsd;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
@@ -21,8 +23,15 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		attrs.put("Artist", frm.artist);
 		attrs.put("Title", frm.title);
 		attrs.put("Album", frm.album);
+		/*try {
+			fo = new FileOutputStream("test.dffdst");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
 	}
-
+	FileOutputStream fo ;
+	int cnt;
 	@Override
 	boolean readDataBlock() throws DecodeException {
 		try {
@@ -38,6 +47,14 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			if (toRead > frm.props.dsd.dataEnd - dsdStream.getFilePointer())
 				toRead = (int) (frm.props.dsd.dataEnd - dsdStream.getFilePointer());
 			dsdStream.readFully(buff, delta, toRead);
+				
+			if (fo != null) {
+				fo.write(buff, delta, toRead);
+				cnt+= toRead;
+				if (cnt > 200*1024) {
+					fo.close();fo = null;
+				}
+			}
 			//System.out.printf("%s%n", Utils.toHexString(0, 100, buff));
 			//if (true)
 				//throw new DecodeException("test", null);

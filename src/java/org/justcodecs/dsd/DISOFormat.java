@@ -89,6 +89,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 
 				}
 			}
+			
 			for (int i = 0; i < ttx.infos.length; i++) {
 				ttx.infos[i].start = tm.getStart(i);
 				ttx.infos[i].duration = tm.getDuration(i);
@@ -100,6 +101,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 			attrs.put("Tracks", ttx.infos);
 			attrs.put("Year", new Integer(toc.disc_date_year));
 			attrs.put("Genre", toc.albumGenre[0].genre);
+			//fo = new FileOutputStream("test.dst");
 		} catch (IOException ioe) {
 			throw new DecodeException("IO", ioe);
 		}
@@ -107,29 +109,31 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 
 	@Override
 	boolean readDataBlock() throws DecodeException {
-		if (dst != null) {
-			readDSTDataBlock();
-			return true;
-		}
 		if (currentFrame > (atoc.track_end - atoc.track_start))
 			return false;
-		try {
-			if (bufPos < 0)
+		if (dst != null) {
+			readDSTDataBlock();
+		} else {
+			try {
+				if (bufPos < 0)
+					bufPos = 0;
+				int delta = bufEnd - bufPos;
+				if (delta > 0)
+					System.arraycopy(buff, bufPos, buff, 0, delta);
+				dsdStream.readFully(header, 0, header.length);
+				dsdStream.readFully(buff, delta, block);
+				currentFrame++;
 				bufPos = 0;
-			int delta = bufEnd - bufPos;
-			if (delta > 0)
-				System.arraycopy(buff, bufPos, buff, 0, delta);
-			dsdStream.readFully(header, 0, header.length);
-			dsdStream.readFully(buff, delta, block);
-			currentFrame++;
-			bufPos = 0;
-			bufEnd = block + delta;
-		} catch (IOException e) {
-			throw new DecodeException("IO exception at reading samples", e);
+				bufEnd = block + delta;
+			} catch (IOException e) {
+				throw new DecodeException("IO exception at reading samples", e);
+			}
 		}
 		return true;
 	}
 
+	FileOutputStream fo ;
+	int cnt;
 	void readDSTDataBlock() throws DecodeException {
 		do {
 			try {
@@ -138,6 +142,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 					//System.out.printf("Reading header at %x %n", dsdStream.getFilePointer());
 					frmHeader = new FrmHeader();
 					frmHeader.read(dsdStream);
+					currentFrame++;
 					//System.out.printf("header: %s%n", frmHeader);
 					if (frmHeader.packet_info_count > 0) {
 						hdrIdx = 0;
@@ -152,13 +157,21 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 					// completing current buffer
 					if (dstLen > 0) { // complete previous
 						//System.out.printf("Decoding 0x%x %x %x %x%n", dstBuff[0], dstBuff[1], dstBuff[2], dstBuff[3]);
-						int delta = bufPos<0?0:bufEnd - bufPos;
+						int delta = bufPos < 0 ? 0 : bufEnd - bufPos;
 						dst.FramDSTDecode(dstBuff, dsdBuf, dstLen, lastFrm);
 						if (delta > 0)
 							System.arraycopy(buff, bufPos, buff, 0, delta);
 						//System.out.printf("filling from %d for %d bytes%n", delta, dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels);
-						//int dsdLen = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
-						int dsdLen=dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;
+						int dsdLen = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels /8 );
+						//int dsdLen=dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;
+						if (fo != null) {
+							fo.write(dsdBuf, 0, dsdLen);
+							cnt+=dsdLen;
+							if (cnt > 200*1024) {
+								fo.close();fo = null;
+							}
+						}
+						
 						System.arraycopy(dsdBuf, 0, buff, delta, dsdLen);
 						bufPos = 0;
 						bufEnd = delta + dsdLen;
@@ -176,10 +189,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 					// advance to next block
 					dstStart = true;
 					int skip = frmHeader.getPackLen(0);
-					for (int i=1; i< frmHeader.packet_info_count; i++)
+					for (int i = 1; i < frmHeader.packet_info_count; i++)
 						skip += frmHeader.getPackLen(i);
-					dsdStream.readFully(dstPakBuf, 0,
-							SACD_LSN_SIZE - frmHeader.getSize() - skip);
+					dsdStream.readFully(dstPakBuf, 0, SACD_LSN_SIZE - frmHeader.getSize() - skip);
 					//System.out.printf("skipping to %x using %d %d%n", dsdStream.getFilePointer(), SACD_LSN_SIZE - frmHeader.getSize() - skip, skip);
 				}
 			} catch (DSTException e) {
@@ -266,4 +278,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 		}
 	}
 
+	class DSTProcessor {
+		
+		byte[] getNextDecoded() {
+			return null;
+		}
+		
+	}
 }
