@@ -1492,7 +1492,7 @@ public class DSTDecoder {
 			ACError = AC.DST_ACDecodeBit(0, AData, ADataLen, 1);
 
 			if (ACError != 0) {
-				throw new DSTException("Arithmetic decoding error!", -1);
+				throw new DSTException(String.format("Arithmetic decoding error at frame %d!",FrameHdr.FrameNr), -1);
 			}
 
 			/* Reshuffle bits from BitStream11 to DsdFrame such, that DsdFrame is
