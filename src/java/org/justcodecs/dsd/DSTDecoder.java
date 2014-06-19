@@ -1447,14 +1447,16 @@ public class DSTDecoder {
 						Stop = (1 << SIZE_CODEDPREDORDER);
 					}
 					int j;
+					short []coeff = FrameHdr.ICoefA[FrameHdr.Filter4Bit[ChNr][BitNr]];
 					for (i = FirPtrs.Pnt[ChNr], j = 0; i < Stop; i++, j++) {
 						PredicVal[ChNr][BitNr] += FirPtrs.Status[ChNr][i]
-								* FrameHdr.ICoefA[FrameHdr.Filter4Bit[ChNr][BitNr]][j];
+								* coeff[j];
 					}
-					for (i = 0; i < FirPtrs.Pnt[ChNr] + FrameHdr.PredOrder[FrameHdr.Filter4Bit[ChNr][BitNr]]
-							- (1 << SIZE_CODEDPREDORDER); i++, j++) {
+					int n = FirPtrs.Pnt[ChNr] + FrameHdr.PredOrder[FrameHdr.Filter4Bit[ChNr][BitNr]]
+							- (1 << SIZE_CODEDPREDORDER);
+					for (i = 0; i < n; i++, j++) {
 						PredicVal[ChNr][BitNr] += FirPtrs.Status[ChNr][i]
-								* FrameHdr.ICoefA[FrameHdr.Filter4Bit[ChNr][BitNr]][j];
+								* coeff[j];
 					}
 
 					/* Arithmetic decode the incoming bit */
