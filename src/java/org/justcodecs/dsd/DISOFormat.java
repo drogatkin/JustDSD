@@ -312,22 +312,15 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	}
 
 	Thread processor;
+	Thread readingThread;
 
 	boolean readDSTDataBlockAsync() throws DecodeException {
 		if (processor == null) {
 			processor = new Thread(this);
 			processor.start();
-		} else {
-			if (runException != null) {
-				if (runException instanceof DecodeException)
-					throw (DecodeException) runException;
-				else
-					throw new DecodeException("Error at decoding", runException);
-			}
-			if (processor.isAlive() == false)
-				return false;
 		}
 		try {
+			readingThread = Thread.currentThread();
 			byte[] dsdBuff = decodedBuffs.take();
 			//System.out.printf("GOt decoded %n");
 			int delta = bufPos < 0 ? 0 : bufEnd - bufPos;
@@ -340,8 +333,15 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			bufEnd = delta + dsdLen;
 			return true;
 		} catch (InterruptedException e) {
-			return false;
+			
 		}
+		if (runException != null) {
+			if (runException instanceof DecodeException)
+				throw (DecodeException) runException;
+			else
+				throw new DecodeException("Error at decoding", runException);
+		}
+		return false;
 	}
 
 	public void run() {
@@ -407,6 +407,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				break;
 			}
 		}
+		if (readingThread != null)
+			readingThread.interrupt();
 	}
 
 	ArrayBlockingQueue<byte[]> decodedBuffs = new ArrayBlockingQueue<byte[]>(QUEUE_SIZE);

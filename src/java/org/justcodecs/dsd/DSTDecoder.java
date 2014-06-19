@@ -99,7 +99,7 @@ public class DSTDecoder {
 		int Fsample44; /* Sample frequency 64, 128, 256              */
 		int[] PredOrder = new int[2 * MAX_CHANNELS]; /* Prediction order used for this frame       */
 		int[] PtableLen = new int[2 * MAX_CHANNELS]; /* Nr of Ptable entries used for this frame   */
-		short[][] ICoefA; /* Integer coefs for actual coding            */
+		int[][] ICoefA; /* Integer coefs for actual coding            */
 		int DSTCoded; /* 1=DST coded is put in DST stream,          */
 		/* 0=DSD is put in DST stream                 */
 		int CalcNrOfBytes; /* Contains number of bytes of the complete   */
@@ -534,7 +534,6 @@ public class DSTDecoder {
 	}
 
 	FrameHeader FrameHdr; /* Contains frame based header information     */
-
 	CodedTable StrFilter; /* Contains FIR-coef. compression data         */
 	CodedTable StrPtable; /* Contains Ptable-entry compression data      */
 	/* input stream.                               */
@@ -581,7 +580,6 @@ public class DSTDecoder {
 				}
 				Start += S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
 			}
-
 			//Val = (byte) S.Table4Segment[ChNr][SegNr];
 			//Arrays.fill(Table4BitCh, Start, NrOfBitsPerCh, Val); // !!
 		}
@@ -1325,7 +1323,7 @@ public class DSTDecoder {
 
 		FrameHdr.MaxNrOfFilters = 2 * FrameHdr.NrOfChannels;
 		FrameHdr.MaxNrOfPtables = 2 * FrameHdr.NrOfChannels;
-		FrameHdr.ICoefA = new short[FrameHdr.MaxNrOfFilters][(1 << SIZE_CODEDPREDORDER)];
+		FrameHdr.ICoefA = new int[FrameHdr.MaxNrOfFilters][(1 << SIZE_CODEDPREDORDER)];
 		StrFilter = new CodedTable(FrameHdr);
 		StrPtable = new CodedTable(FrameHdr);
 		StrFilter.TableType = FILTER;
@@ -1417,14 +1415,14 @@ public class DSTDecoder {
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.FSeg, FrameHdr.Filter4Bit);
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.PSeg, FrameHdr.Ptable4Bit);
 
-			DstXbits.PBit = Reverse7LSBs(FrameHdr.ICoefA[0][0]);
+			DstXbits.PBit = Reverse7LSBs((short) FrameHdr.ICoefA[0][0]);
 			//System.out.printf("revers of %x is %x%n", FrameHdr.ICoefA[0][0], DstXbits.PBit);
 			DstXbits.Bit = AC.DST_ACDecodeBit(DstXbits.PBit, AData, ADataLen, 0);
 
 			/* Initialise the Pnt and Status pointers for each channel */
 			for (ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++) {
 				for (i = 0; i < (1 << SIZE_CODEDPREDORDER); i++) {
-					FirPtrs.Status[ChNr][i] = 2 * (i & 1) - 1;
+					FirPtrs.Status[ChNr][i] = (2 * (i & 1) - 1);
 				}
 				FirPtrs.Pnt[ChNr] = 0;
 			}
@@ -1440,7 +1438,7 @@ public class DSTDecoder {
 						Stop = (1 << SIZE_CODEDPREDORDER);
 					}
 					int j;
-					short[] coeff = FrameHdr.ICoefA[filter];
+					int[] coeff = FrameHdr.ICoefA[filter];
 					int[] status = FirPtrs.Status[ChNr];
 					for (i = FirPtrs.Pnt[ChNr], j = 0; i < Stop; i++, j++) {
 						PredicVal += status[i] * coeff[j];
@@ -1449,6 +1447,8 @@ public class DSTDecoder {
 					for (i = 0; i < n; i++, j++) {
 						PredicVal += status[i] * coeff[j];
 					}
+					if (PredicVal > 0)
+						throw new DSTException("stop", 0);
 					byte BitResidual;
 					/* Arithmetic decode the incoming bit */
 					if ((FrameHdr.HalfProb[ChNr] == 1) && (BitNr < FrameHdr.NrOfHalfBits[ChNr])) {
@@ -1538,7 +1538,7 @@ public class DSTDecoder {
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.FSeg, FrameHdr.Filter4Bit);
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.PSeg, FrameHdr.Ptable4Bit);
 
-			DstXbits.PBit = Reverse7LSBs(FrameHdr.ICoefA[0][0]);
+			DstXbits.PBit = Reverse7LSBs((short) FrameHdr.ICoefA[0][0]);
 			//System.out.printf("revers of %x is %x%n", FrameHdr.ICoefA[0][0], DstXbits.PBit);
 
 			DstXbits.Bit = AC.DST_ACDecodeBit(DstXbits.PBit, AData, ADataLen, 0);
@@ -1546,7 +1546,7 @@ public class DSTDecoder {
 			/* Initialise the Pnt and Status pointers for each channel */
 			for (ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++) {
 				for (i = 0; i < (1 << SIZE_CODEDPREDORDER); i++) {
-					FirPtrs.Status[ChNr][i] = 2 * (i & 1) - 1;
+					FirPtrs.Status[ChNr][i] = (short) (2 * (i & 1) - 1);
 				}
 				FirPtrs.Pnt[ChNr] = 0;
 			}
@@ -1599,8 +1599,8 @@ public class DSTDecoder {
 					}
 
 					//FirPtrs.Status[ChNr][FirPtrs.Pnt[ChNr]] = BitStream11[ChNr][BitNr];
-					FirPtrs.Status[ChNr][FirPtrs.Pnt[ChNr]] = (DSDdata[ChNr][(BitNr) / 8] & (BM[BitNr % 8] & 255)) > 0 ? 1
-							: -1;
+					FirPtrs.Status[ChNr][FirPtrs.Pnt[ChNr]] = ((DSDdata[ChNr][(BitNr) / 8] & (BM[BitNr % 8] & 255)) > 0 ? 1
+							: -1);
 				}
 			}
 			/* Flush the arithmetic decoder */
