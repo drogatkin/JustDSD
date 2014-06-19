@@ -28,7 +28,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	int hdrIdx;
 	int lastFrm;
 	boolean dstSeek;
-	Exception runException;
+	Throwable runException;
 
 	@Override
 	public void init(DSDStream ds) throws DecodeException {
@@ -393,17 +393,13 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						else if (skip < 0)
 							throw new DecodeException("Problem in DST decoding in frame " + currentFrame, null);
 					}
-				}
-			} catch (DSTException e) {
-				runException = e;
-				break;
-			} catch (IOException e) {
-				runException = e;
-				break;
-			} catch (DecodeException e) {
-				runException = e;
-				break;
+				}			
 			} catch (InterruptedException e) {
+				break;
+			} catch(Throwable t) {
+				runException = t;
+				if (t instanceof ThreadDeath)
+					throw (ThreadDeath)t;
 				break;
 			}
 		}
