@@ -7,7 +7,7 @@ import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
 public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnable {
-	final static int QUEUE_SIZE = 10;
+	final static int QUEUE_SIZE = 8;
 	byte buff[];
 	int sectorSize;
 	TOC toc;
@@ -28,6 +28,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	int hdrIdx;
 	int lastFrm;
 	boolean dstSeek;
+	Exception runException;
 
 	@Override
 	public void init(DSDStream ds) throws DecodeException {
@@ -317,6 +318,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			processor = new Thread(this);
 			processor.start();
 		}
+		if (runException != null) {
+			if (runException instanceof DecodeException)
+				throw (DecodeException)runException;
+			else throw new DecodeException("Error at decoding", runException);
+		}
 		try {
 			byte[] dsdBuff = decodedBuffs.take();
 			//System.out.printf("GOt decoded %n");
@@ -335,7 +341,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	}
 
 	public void run() {
-		Exception runException = null;
 		for (;;) {
 			try {
 				synchronized (this) {
@@ -398,9 +403,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				break;
 			}
 		}
-		while (true)
-			;
-
 	}
 
 	ArrayBlockingQueue<byte[]> decodedBuffs = new ArrayBlockingQueue<byte[]>(QUEUE_SIZE);
@@ -413,6 +415,13 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	void putForProcessing(byte[] dsdBuff) throws InterruptedException {
 		//System.out.printf("Added buf%n");
 		decodedBuffs.put(dsdBuff);
+	}
+	
+	@Override
+	public void close() {
+		if (processor != null)
+			processor.interrupt();
+		super.close();
 	}
 
 }

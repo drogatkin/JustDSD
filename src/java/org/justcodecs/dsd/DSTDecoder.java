@@ -143,7 +143,6 @@ public class DSTDecoder {
 		int[] Coded; /* DST encode coefs/entries of Fir/PtabNr     */
 		int[] BestMethod; /* BestMethod[Fir/PtabNr]                     */
 		int[][] m; /* m[Fir/PtabNr][Method]                      */
-		int[][] Data; /* Fir/PtabData[Fir/PtabNr][Index]            */
 		int[] DataLen; /* Fir/PtabDataLength[Fir/PtabNr]             */
 		int StreamBits; /* nr of bits all filters use in the stream   */
 		int TableType; /* FILTER or PTABLE: indicates contents       */
@@ -154,7 +153,6 @@ public class DSTDecoder {
 			Coded = new int[fh.MaxNrOfFilters];
 			BestMethod = new int[fh.MaxNrOfFilters];
 			m = new int[fh.MaxNrOfPtables][NROFPRICEMETHODS];
-			Data = new int[fh.MaxNrOfPtables][AC_BITS * AC_HISMAX];
 			DataLen = new int[fh.MaxNrOfPtables];
 		}
 	}
@@ -165,8 +163,6 @@ public class DSTDecoder {
 		int ByteCounter;
 		int BitPosition;
 		byte DataByte;
-
-		long tmp[] = new long[1];
 
 		/***********************************************************************
 		 * ResetReadingIndex
@@ -226,12 +222,10 @@ public class DSTDecoder {
 
 		byte FIO_BitGetChrUnsigned(int Len) throws DSTException {
 			if (Len > 0) {
-				getbits(tmp, Len);
 				//System.out.printf("CharU %d - %d%n", tmp[0], (byte) tmp[0]);
-				return (byte) tmp[0];
+				return (byte) getbits(Len);
 			} else if (Len == 0) {
 				return 0;
-
 			} else
 				throw new DSTException("EOD", -1);
 		}
@@ -254,9 +248,8 @@ public class DSTDecoder {
 
 		int FIO_BitGetIntUnsigned(int Len) throws DSTException {
 			if (Len > 0) {
-				getbits(tmp, Len);
 				//System.out.printf("IntU %d - %d%n", tmp[0], (int) tmp[0]);
-				return (int) tmp[0];
+				return (int) getbits(Len);
 			} else if (Len == 0) {
 				return 0;
 			} else
@@ -281,8 +274,7 @@ public class DSTDecoder {
 
 		int FIO_BitGetIntSigned(int Len) throws DSTException {
 			if (Len > 0) {
-				getbits(tmp, Len);
-				int x = (int) tmp[0];
+				int x = (int) getbits(Len);
 
 				if (x >= (1 << (Len - 1))) {
 					x -= (1 << Len);
@@ -313,8 +305,7 @@ public class DSTDecoder {
 
 		short FIO_BitGetShortSigned(int Len) throws DSTException {
 			if (Len > 0) {
-				getbits(tmp, Len);
-				short x = (short) tmp[0];
+				short x = (short)getbits(Len);
 
 				if (x >= (1 << (Len - 1))) {
 					x -= (1 << Len);
@@ -343,7 +334,8 @@ public class DSTDecoder {
 
 		static int masks[] = { 0, 1, 3, 7, 0xf, 0x1f, 0x3f, 0x7f, 0xff };
 
-		void getbits(long[] outword, int out_bitptr) throws DSTException {
+		long getbits(int out_bitptr) throws DSTException {
+			long outword ;
 			if (out_bitptr == 1) {
 				if (BitPosition == 0) {
 					DataByte = pDSTdata[ByteCounter++];
@@ -354,12 +346,11 @@ public class DSTDecoder {
 					BitPosition = 8;
 				}
 				BitPosition--;
-				outword[0] = (DataByte >> BitPosition) & 1;
-				//System.out.printf("Byte:0x%x, res 0x%x, for %d%n", DataByte, outword[0], out_bitptr);
-				return;
+				//System.out.printf("Byte:0x%x, res 0x%x, for %d%n", DataByte, outword[0], out_bitptr);				
+				return (DataByte >> BitPosition) & 1;
 			}
 
-			outword[0] = 0;
+			outword = 0;
 			while (out_bitptr > 0) {
 				int thisbits, mask, shift;
 
@@ -372,19 +363,24 @@ public class DSTDecoder {
 					BitPosition = 8;
 				}
 
-				thisbits = Math.min(BitPosition, out_bitptr);
+				if (BitPosition < out_bitptr)
+					thisbits = BitPosition;
+				else 
+					thisbits = out_bitptr;
+				//thisbits = Math.min(BitPosition, out_bitptr);
 				shift = (BitPosition - thisbits);
 				mask = masks[thisbits] << shift;
 
 				shift = (out_bitptr - thisbits) - shift;
 				if (shift <= 0)
-					outword[0] |= ((DataByte & mask) >> -shift);
+					outword |= ((DataByte & mask) >> -shift);
 				else
-					outword[0] |= ((DataByte & mask) << shift);
+					outword |= ((DataByte & mask) << shift);
 				out_bitptr -= thisbits;
 				BitPosition -= thisbits;
 			}
 			//System.out.printf("Byte:0x%x, res 0x%x, for %d%n", DataByte, outword[0], out_bitptr);
+			return outword;
 		}
 
 		/***************************************************************************/
