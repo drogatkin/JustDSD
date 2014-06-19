@@ -278,7 +278,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	boolean isDST() {
 		return dst != null;
 	}
-	
+
 	@Override
 	synchronized void seek(long sampleNum) throws DecodeException {
 		try {
@@ -317,11 +317,15 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		if (processor == null) {
 			processor = new Thread(this);
 			processor.start();
-		}
-		if (runException != null) {
-			if (runException instanceof DecodeException)
-				throw (DecodeException)runException;
-			else throw new DecodeException("Error at decoding", runException);
+		} else {
+			if (runException != null) {
+				if (runException instanceof DecodeException)
+					throw (DecodeException) runException;
+				else
+					throw new DecodeException("Error at decoding", runException);
+			}
+			if (processor.isAlive() == false)
+				return false;
 		}
 		try {
 			byte[] dsdBuff = decodedBuffs.take();
@@ -416,7 +420,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		//System.out.printf("Added buf%n");
 		decodedBuffs.put(dsdBuff);
 	}
-	
+
 	@Override
 	public void close() {
 		if (processor != null)
