@@ -7,7 +7,7 @@ import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
 public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnable {
-	final static int QUEUE_SIZE = 8;
+	final static int QUEUE_SIZE = 4;
 	byte buff[];
 	int sectorSize;
 	TOC toc;
