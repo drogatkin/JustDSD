@@ -9,7 +9,7 @@
       <!ENTITY build_file "&project;.jar"> <!-- change if differs -->
       <!ENTITY domain "org">  <!-- change if differs -->
       <!ENTITY resources "&domain;.&project;.resources">
-      <!ENTITY manifestf ""> <!-- type relative path to manifest -->
+      <!ENTITY manifestf "manifest.mf"> <!-- type relative path to manifest -->
       <!ENTITY main_class "&domain;.justcodecs.dsd.Player">  <!-- type main class for run -->
       ]>
 
