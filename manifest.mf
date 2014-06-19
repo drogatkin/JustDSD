@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Name: jdsd.jar
+Main-Class: org.justcodecs.dsd.Player
+Java-Bean: False
+Class-Path: 
+ id3v2.jar
