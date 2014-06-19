@@ -1,13 +1,13 @@
 package org.justcodecs.dsd;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
-public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
-
+public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnable {
+	final static int QUEUE_SIZE = 10;
 	byte buff[];
 	int sectorSize;
 	TOC toc;
@@ -21,7 +21,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 	DSTDecoder dst;
 	byte[] dstBuff;
 	byte dstPakBuf[] = new byte[SACD_LSN_SIZE];
-	byte dsdBuf[] = new byte[1024 * 64]; //??
+	byte dsdBuf[];
 	int dstLen;
 	boolean dstStart;
 	FrmHeader frmHeader;
@@ -111,7 +111,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 	@Override
 	boolean readDataBlock() throws DecodeException {
 		if (dst != null)
-			return readDSTDataBlock();
+			return readDSTDataBlockAsync();
 		if (currentFrame > (atoc.track_end - atoc.track_start))
 			return false;
 		try {
@@ -164,15 +164,16 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 							System.arraycopy(buff, bufPos, buff, 0, delta);
 						//System.out.printf("filling from %d for %d bytes%n", delta, dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels);
 						int dsdLen = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
-						//int dsdLen=dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;
-						/*if (fo != null) {
-							fo.write(dsdBuf, 0, dsdLen);
-							cnt+=dsdLen;
-							if (cnt > 200*1024) {
-								fo.close();fo = null;
-							}
-						}*/
+						//int dsdLen=dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels;						 
 						System.arraycopy(dsdBuf, 0, buff, delta, dsdLen);
+						/*
+						int dsdLen = (int) dst.FrameHdr.NrOfBitsPerCh/8;
+						for (int i=0; i<dst.FrameHdr.NrOfChannels; i++) {
+							if (delta > 0)
+								System.arraycopy(buff2[i], bufPos, buff2[i], 0, delta);
+							dst.FramDSTDecode(dstBuff, buff2t, dstLen, lastFrm);
+							System.arraycopy(buff2t[i], 0, buff2[i], delta, dsdLen);
+						}*/
 						bufPos = 0;
 						bufEnd = delta + dsdLen;
 						dstLen = 0;
@@ -184,7 +185,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 				//try {
 				dsdStream.readFully(dstBuff, dstLen, frmHeader.getPackLen(hdrIdx));
 				//} catch(Exception e) {
-					//System.out.printf("adding to dst from %d, len %d, idx %d of %d at x%x at frame %d%n", dstLen, frmHeader.getPackLen(hdrIdx), hdrIdx, frmHeader.packet_info_count, dsdStream.getFilePointer(), currentFrame);
+				//System.out.printf("adding to dst from %d, len %d, idx %d of %d at x%x at frame %d%n", dstLen, frmHeader.getPackLen(hdrIdx), hdrIdx, frmHeader.packet_info_count, dsdStream.getFilePointer(), currentFrame);
 				//}
 				if (frmHeader.getDataType(hdrIdx) == 2 && !dstSeek)
 					dstLen += frmHeader.getPackLen(hdrIdx);
@@ -201,7 +202,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 					if (skip > 0)
 						dsdStream.readFully(dstPakBuf, 0, skip);
 					else if (skip < 0)
-						throw new DecodeException("Problem in DST decoding in frame "+currentFrame, null);
+						throw new DecodeException("Problem in DST decoding in frame " + currentFrame, null);
 					/*try {
 						if (SACD_LSN_SIZE - frmHeader.getSize() - skip > 0)
 							dsdStream.readFully(dstPakBuf, 0, SACD_LSN_SIZE - frmHeader.getSize() - skip);
@@ -254,7 +255,10 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 			buff = new byte[block + (overrun * getNumChannels())];
 		else {
 			dstBuff = new byte[MAX_DST_SIZE]; //MAX_DST_SIZE
-			buff = new byte[1024 * 64/*dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels*/];
+			buff = new byte[(dst.FrameHdr.MaxFrameLen + overrun) * dst.FrameHdr.NrOfChannels];
+			dsdBuf = new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]; //??
+			for (int i = 0; i < QUEUE_SIZE; i++)
+				usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]);
 		}
 		header = new byte[frmHdrSize];
 	}
@@ -270,7 +274,12 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 	}
 
 	@Override
-	void seek(long sampleNum) throws DecodeException {
+	boolean isDST() {
+		return dst != null;
+	}
+	
+	@Override
+	synchronized void seek(long sampleNum) throws DecodeException {
 		try {
 			if (sampleNum == 0) {
 				dsdStream.seek(atoc.track_start * sectorSize);
@@ -301,11 +310,109 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook {
 		}
 	}
 
-	class DSTProcessor {
+	Thread processor;
 
-		byte[] getNextDecoded() {
-			return null;
+	boolean readDSTDataBlockAsync() throws DecodeException {
+		if (processor == null) {
+			processor = new Thread(this);
+			processor.start();
 		}
+		try {
+			byte[] dsdBuff = decodedBuffs.take();
+			//System.out.printf("GOt decoded %n");
+			int delta = bufPos < 0 ? 0 : bufEnd - bufPos;
+			if (delta > 0)
+				System.arraycopy(buff, bufPos, buff, 0, delta);
+			int dsdLen = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
+			System.arraycopy(dsdBuff, 0, buff, delta, dsdLen);
+			usedBuffs.put(dsdBuff);
+			bufPos = 0;
+			bufEnd = delta + dsdLen;
+			return true;
+		} catch (InterruptedException e) {
+			return false;
+		}
+	}
+
+	public void run() {
+		Exception runException = null;
+		for (;;) {
+			try {
+				synchronized (this) {
+					if (dstStart) {
+						if (currentFrame > (atoc.track_end - atoc.track_start))
+							break;
+						dstStart = false;
+						frmHeader = new FrmHeader();
+						frmHeader.read(dsdStream);
+						currentFrame++;
+						if (frmHeader.packet_info_count > 0) {
+							hdrIdx = 0;
+						} else {
+							dstStart = true;
+							dsdStream.readFully(dstPakBuf, 0, SACD_LSN_SIZE - frmHeader.getSize());
+							continue;
+						}
+					}
+					if (frmHeader.isFrameStart(hdrIdx)) {
+						// completing current buffer
+						if (dstLen > 0) { // complete previous
+							byte[] dsdBuff;
+							dst.FramDSTDecode(dstBuff, dsdBuff = getProcessed(), dstLen, lastFrm);
+							putForProcessing(dsdBuff);
+							dstLen = 0;
+
+							continue;
+						}
+						dstSeek = false;
+					}
+					dsdStream.readFully(dstBuff, dstLen, frmHeader.getPackLen(hdrIdx));
+					if (frmHeader.getDataType(hdrIdx) == 2 && !dstSeek)
+						dstLen += frmHeader.getPackLen(hdrIdx);
+					//dstSeek = false;
+					lastFrm = frmHeader.getFrames(hdrIdx);
+					hdrIdx++;
+					if (hdrIdx >= frmHeader.packet_info_count) {
+						// advance to next block
+						dstStart = true;
+						int skip = frmHeader.getPackLen(0);
+						for (int i = 1; i < frmHeader.packet_info_count; i++)
+							skip += frmHeader.getPackLen(i);
+						skip = SACD_LSN_SIZE - frmHeader.getSize() - skip;
+						if (skip > 0)
+							dsdStream.readFully(dstPakBuf, 0, skip);
+						else if (skip < 0)
+							throw new DecodeException("Problem in DST decoding in frame " + currentFrame, null);
+					}
+				}
+			} catch (DSTException e) {
+				runException = e;
+				break;
+			} catch (IOException e) {
+				runException = e;
+				break;
+			} catch (DecodeException e) {
+				runException = e;
+				break;
+			} catch (InterruptedException e) {
+				break;
+			}
+		}
+		while (true)
+			;
 
 	}
+
+	ArrayBlockingQueue<byte[]> decodedBuffs = new ArrayBlockingQueue<byte[]>(QUEUE_SIZE);
+	ArrayBlockingQueue<byte[]> usedBuffs = new ArrayBlockingQueue<byte[]>(QUEUE_SIZE);
+
+	byte[] getProcessed() throws InterruptedException {
+		return usedBuffs.take();
+	}
+
+	void putForProcessing(byte[] dsdBuff) throws InterruptedException {
+		//System.out.printf("Added buf%n");
+		decodedBuffs.put(dsdBuff);
+	}
+
 }

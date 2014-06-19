@@ -48,6 +48,10 @@ public class Decoder implements Filters {
 	public long getSampleCount() {
 		return dsdf.getSampleCount();
 	}
+	
+	public boolean isDST() {
+		return dsdf.isDST();
+	}
 
 	public void seek(long sampleNum) throws DecodeException {
 		dsdf.seek(sampleNum);

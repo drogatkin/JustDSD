@@ -47,6 +47,10 @@ public abstract class DSDFormat<B> {
 		}
 	}
 	
+	boolean isDST() {
+		return false;
+	}
+	
 	public Object getMetadata(String key) {
 		if (attrs == null)
 			return null;
