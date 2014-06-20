@@ -413,7 +413,7 @@ public class DSTDecoder {
 		int[][] Status;
 	}
 
-	static class ACData {
+	static final  class ACData {
 		int Init = 1;
 		int C;
 		int A;

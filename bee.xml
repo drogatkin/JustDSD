@@ -38,7 +38,8 @@
 *  doc      - build JavaDoc                       *
 *  compile  - do Java compilation                 *
 *  jar      - build &build_file; file             *
-*  run      - run application &main_class;        *
+*  dff      - extract .dff                        *
+*  run      - play using &main_class;             *
 ***************************************************
     </echo>
   </target>
@@ -276,6 +277,15 @@
     <dependency target="jar"/>
     <dependency value="true"/>
     <task name="main" code="org.justcodecs.dsd.DecoderInt" path="run class path">
+       <parameter variable="~#args#~"/>
+    </task>
+  </target>  
+
+  <target name="dff" dir="PROJECT_HOME">
+    <echo>Extracting...</echo>
+    <dependency target="jar"/>
+    <dependency value="true"/>
+    <task name="main" code="&domain;.justcodecs.dsd.DFFExtractor" path="run class path">
        <parameter variable="~#args#~"/>
     </task>
   </target>  
