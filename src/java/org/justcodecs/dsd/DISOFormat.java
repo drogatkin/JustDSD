@@ -296,6 +296,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		try {
 			if (sampleNum == 0) {
 				dsdStream.seek(atoc.track_start * sectorSize);
+				//new Exception().printStackTrace();
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()) {
 				if (true) {
 					currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
@@ -318,6 +319,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			//bufEnd = 0;
 			dstStart = true;
 			dstLen = 0;
+			seekSample = -1;
 			//System.out.printf("Positioned to %x secotr %d block %d%n", dsdStream.getFilePointer(), atoc.track_start, currentFrame);
 		} catch (IOException e) {
 			throw new DecodeException("IO", e);
@@ -377,7 +379,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				synchronized (this) {
 					if (seekSample >= 0) {
 						seek(seekSample);
-						seekSample = -1;
 					}
 				}
 				if (dstStart) {

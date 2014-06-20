@@ -93,4 +93,12 @@ public class Utils {
 			result.append(String.format(" %x", shorts[i]));
 		return result.toString();
 	}
+	
+	static <N> N nvl(N... ns) {
+		for (N n : ns) {
+			if (n != null)
+				return n;
+		}
+		return null;
+	}
 }

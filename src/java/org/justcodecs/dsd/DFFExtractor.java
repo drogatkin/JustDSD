@@ -1,7 +1,9 @@
 package org.justcodecs.dsd;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
 public class DFFExtractor {
@@ -17,6 +19,7 @@ public class DFFExtractor {
 		boolean cue = true;
 		boolean tde = false;
 		boolean tre = false;
+		boolean ove = false;
 		for (String arg : args) {
 			if ("-d".equals(arg))
 				tde = true;
@@ -31,6 +34,8 @@ public class DFFExtractor {
 					tre = true;
 				else if ("-n".equals(arg))
 					cue = false;
+				else if ("-f".equals(arg))
+					ove = true;
 				else {
 					isoF = arg;
 					break;
@@ -40,7 +45,7 @@ public class DFFExtractor {
 		if (trgDir == null)
 			trgDir = ".";
 		try {
-			extractDff(new File(isoF), new File(trgDir), track, cue);
+			extractDff(new File(isoF), new File(trgDir), track, cue, ove);
 			System.out.printf("Done%n");
 		} catch (ExtractionProblem e) {
 			System.out.printf("Problem %s%n", e);
@@ -49,7 +54,7 @@ public class DFFExtractor {
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] <ISO path>%n where: n - no cue,%n        t - extract only specified track");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] <ISO path>%n where: n - no cue,%n        f - overwrite existing file%n        t -");
 	}
 
 	static class ExtractionProblem extends Exception {
@@ -58,11 +63,11 @@ public class DFFExtractor {
 		}
 	}
 
-	static void extractDff(File iso, File target, int track, boolean cue) throws ExtractionProblem {
+	static void extractDff(File iso, File target, int track, boolean cue, boolean ove) throws ExtractionProblem {
 		RandomAccessFile dff = null;
 		DISOFormat dsf = new DISOFormat();
+		OutputStreamWriter cuew = null;
 		try {
-
 			dsf.init(new Utils.RandomDSDStream(iso));
 			String album = (String) dsf.getMetadata("Album");
 			if (album == null)
@@ -71,16 +76,71 @@ public class DFFExtractor {
 				album = iso.getName();
 				album = album.substring(0, album.length() - 4);
 			}
-			dff = new RandomAccessFile(new File(target, normalize(album) + ".dff"), "rw");
+			Scarletbook.TrackInfo[] tracks = (Scarletbook.TrackInfo[]) dsf.getMetadata("Tracks");
+			long seek = 0;
+			long trackLen = 0;
+			if (tracks != null) {
+				Scarletbook.TrackInfo tr = null;
+				if (track > 0) {
+					track--;
+					if (track < tracks.length) {
+						tr = tracks[track];
+						seek = (long) tr.start * dsf.getSampleRate();
+						//System.out.printf("Seek to sampl %d at %d%n", seek, tr.start );
+						trackLen = (long) (tr.duration + 1) * dsf.getNumChannels() * dsf.getSampleRate() / 8;
+						album = Utils.nvl((String) tr.get("title"), String.format("Track %02d", track + 1));
+					}
+				}
+				if (cue) { // TODO can be created without tracks
+					File cuef = new File(target, normalize(album) + ".cue");
+					if (cuef.exists() && !ove)
+						throw new ExtractionProblem("CUE " + cuef + " already exists");
+					cuew = new OutputStreamWriter(new FileOutputStream(cuef), "UTF-8");
+					cuew.write(String.format("REM GENRE %s%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
+					cuew.write(String.format("REM DATE %s%n", dsf.getMetadata("Year").toString()));
+					cuew.write(String.format("REM DISCID %s%n", dsf.toc.discCatalogNumber));
+					cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
+					cuew.write(String.format("PERFORMER \"%s\"%n",
+							Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
+					cuew.write(String.format("TITLE \"%s\"%n",
+							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")), "NA")));
+					cuew.write(String.format("FILE \"%s\" WAVE%n", cuef.getName()));
+					if (tr == null) {
+						for (int t = 0; t < tracks.length; t++) {
+							cuew.write(String.format("  TRACK %02d AUDIO%n", t + 1));
+							cuew.write(String.format("    TITLE \"%s\"%n",
+									Utils.nvl(normalizeName(tracks[t].get("title")))));
+							cuew.write(String.format("    PERFORMER \"%s\"%n",
+									Utils.nvl(normalizeName(tracks[t].get("performer")))));
+							cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", tracks[t].start / 3600,
+									(tracks[t].start % 3600) / 60, tracks[t].start % 60));
+						}
+					} else {
+						cuew.write(String.format("  TRACK 01 AUDIO%n"));
+						cuew.write(String.format("    TITLE \"%s\"%n",
+								Utils.nvl(normalizeName(tracks[track - 1].get("title")))));
+						cuew.write(String.format("    PERFORMER \"%s\"%n",
+								Utils.nvl(normalizeName(tracks[track - 1].get("performer")))));
+						cuew.write(String.format("    INDEX 01 00:00:00%n"));
+					}
+					cuew.flush();
+				}
+			}
+			File df = new File(target, normalize(album) + ".dff");
+			if (df.exists() && !ove)
+				throw new ExtractionProblem("File " + df + " already exists");
+			dff = new RandomAccessFile(df, "rw");
 			long hdrSize = writeDFFHeader(dff, dsf);
 			long len = 0;
 			dsf.initBuffers(0);
 			byte samples[] = dsf.getSamples();
-			dsf.seek(0); // TODO track
+			dsf.seek(seek); // TODO track
 			while (dsf.readDataBlock()) {
 				dff.write(samples, 0, dsf.bufEnd);
 				dsf.bufPos = dsf.bufEnd;
 				len += dsf.bufEnd;
+				if (trackLen > 0 && len >= trackLen)
+					break;
 			}
 			dff.writeByte(0);
 			dff.seek(4);
@@ -88,13 +148,18 @@ public class DFFExtractor {
 			dff.seek(hdrSize - 8);
 			dff.writeLong(len);
 		} catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 			throw new ExtractionProblem(e.getMessage());
 		} finally {
 			try {
 				dff.close();
 			} catch (Exception e) {
 			}
+			if (cuew != null)
+				try {
+					cuew.close();
+				} catch (IOException e) {
+				}
 			dsf.close();
 		}
 	}
@@ -104,9 +169,32 @@ public class DFFExtractor {
 		for (int i = 0; i < album.length(); i++) {
 			switch (album.charAt(i)) {
 			case '"':
+			case '/':
+			case '\\':
+			case '?':
+			case '*':
 				continue;
 			default:
 				result.append(album.charAt(i));
+			}
+		}
+		return result.toString();
+	}
+
+	private static String normalizeName(String name) {
+		if (name == null)
+			return name;
+		StringBuilder result = new StringBuilder();
+		for (int i = 0; i < name.length(); i++) {
+			switch (name.charAt(i)) {
+			case '"':
+				result.append('\'');
+				continue;
+			case '\r':
+			case '\n':
+				continue;
+			default:
+				result.append(name.charAt(i));
 			}
 		}
 		return result.toString();
@@ -160,7 +248,7 @@ public class DFFExtractor {
 		dff.writeBytes("CHNL");
 		size = 2 + 4 * dsf.getNumChannels();
 		dff.writeLong(size);
-		
+
 		//dff.writeByte((size >> 8) & 255);
 		//dff.writeByte(size & 255);
 		dff.writeByte(0);
@@ -175,7 +263,6 @@ public class DFFExtractor {
 		case 6:
 			dff.writeBytes("MLFTMRGTC   LFE LS  RS  ");
 			break;
-
 		}
 		dff.writeBytes("CMPR");
 		dff.writeLong(20);
