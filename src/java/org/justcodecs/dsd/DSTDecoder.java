@@ -157,7 +157,7 @@ public class DSTDecoder {
 		}
 	}
 
-	static class StrData {
+	static final class StrData {
 		byte[] pDSTdata;
 		int TotalBytes;
 		int ByteCounter;
@@ -403,12 +403,12 @@ public class DSTDecoder {
 
 	}
 
-	static class DSTXBITSData {
+	static final  class DSTXBITSData {
 		int PBit;
 		byte Bit;
 	}
 
-	static class FirPtrData {
+	static final class FirPtrData {
 		int[] Pnt;
 		int[][] Status;
 	}
@@ -1549,7 +1549,25 @@ public class DSTDecoder {
 					byte Filter = FrameHdr.Filter4Bit[ChNr][BitNr];
 
 					/* Calculate output value of the FIR filter */
-					Predict =(short) LT_RUN_FILTER_I(LT_ICoefI[Filter], LT_Status[ChNr]);
+					//Predict =(short) LT_RUN_FILTER_I(LT_ICoefI[Filter], LT_Status[ChNr]);
+					short[][] FilterTable = LT_ICoefI[Filter];
+					int[] ChannelStatus = LT_Status[ChNr];
+					Predict  = (short) (FilterTable[ 0][ChannelStatus[ 0]]
+				     +FilterTable[ 1][ChannelStatus[ 1]]
+				     +FilterTable[ 2][ChannelStatus[ 2]]
+				     +FilterTable[ 3][ChannelStatus[ 3]]
+				     +FilterTable[ 4][ChannelStatus[ 4]]
+				     +FilterTable[ 5][ChannelStatus[ 5]]
+				     +FilterTable[ 6][ChannelStatus[ 6]]
+				     +FilterTable[ 7][ChannelStatus[ 7]]
+				     +FilterTable[ 8][ChannelStatus[ 8]]
+				     +FilterTable[ 9][ChannelStatus[ 9]]
+				     +FilterTable[10][ChannelStatus[10]]
+				     +FilterTable[11][ChannelStatus[11]]
+				     +FilterTable[12][ChannelStatus[12]]
+				     +FilterTable[13][ChannelStatus[13]]
+				     +FilterTable[14][ChannelStatus[14]]
+				     +FilterTable[15][ChannelStatus[15]]);
 					
 					/* Arithmetic decode the incoming bit */
 					if ((FrameHdr.HalfProb[ChNr] == 1) && (BitNr < FrameHdr.NrOfHalfBits[ChNr])) {
@@ -1557,7 +1575,6 @@ public class DSTDecoder {
 					} else {
 						int table4bit = FrameHdr.Ptable4Bit[ChNr][BitNr];
 						PtableIndex = LT_ACGetPtableIndex(Predict, FrameHdr.PtableLen[table4bit]);
-
 						Residual =  (short) AC.LT_ACDecodeBit_Decode(P_one[table4bit][PtableIndex], AData, ADataLen);
 					}
 
@@ -1569,9 +1586,9 @@ public class DSTDecoder {
 
 					/* Update filter */
 					for (i = 15; i > 0; i--) {
-						LT_Status[ChNr][i] =  ((LT_Status[ChNr][i] << 1) | ((LT_Status[ChNr][i-1] >> 7) & 1));
+						LT_Status[ChNr][i] =  ((LT_Status[ChNr][i] << 1) | ((LT_Status[ChNr][i-1] >> 7) & 1)) &255;
 					}
-					LT_Status[ChNr][0] = ((LT_Status[ChNr][0] << 1) | BitVal);
+					LT_Status[ChNr][0] = ((LT_Status[ChNr][0] << 1) | BitVal) & 255;
 				}
 			}
 
