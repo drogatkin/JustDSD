@@ -76,6 +76,7 @@ public class DFFExtractor {
 			long len = 0;
 			dsf.initBuffers(0);
 			byte samples[] = dsf.getSamples();
+			dsf.seek(0); // TODO track
 			while (dsf.readDataBlock()) {
 				dff.write(samples, 0, dsf.bufEnd);
 				dsf.bufPos = dsf.bufEnd;
@@ -131,7 +132,7 @@ public class DFFExtractor {
 		dff.writeLong(4);
 		dff.writeInt(0x01040000);
 		dff.writeBytes("PROP");
-		dff.writeLong(0);
+		dff.writeInt(0);
 		int size = 66 + 4 * dsf.getNumChannels();
 		dff.writeByte(0);
 		dff.writeByte(0);
@@ -158,10 +159,10 @@ public class DFFExtractor {
 		}
 		dff.writeBytes("CHNL");
 		size = 2 + 4 * dsf.getNumChannels();
-		dff.writeByte(0);
-		dff.writeByte(0);
-		dff.writeByte((size >> 8) & 255);
-		dff.writeByte(size & 255);
+		dff.writeLong(size);
+		
+		//dff.writeByte((size >> 8) & 255);
+		//dff.writeByte(size & 255);
 		dff.writeByte(0);
 		dff.writeByte(dsf.getNumChannels());
 		switch (dsf.getNumChannels()) {
@@ -179,7 +180,7 @@ public class DFFExtractor {
 		dff.writeBytes("CMPR");
 		dff.writeLong(20);
 		dff.writeBytes("DSD ");
-		dff.writeLong(14);
+		dff.writeByte(14);
 		dff.writeBytes("not compressed");
 		dff.writeByte(0);
 		dff.writeBytes("DSD ");

@@ -314,10 +314,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				}
 			} else
 				throw new DecodeException("Trying to seek non existing sample " + sampleNum, null);
-			bufPos = -1;
-			bufEnd = 0;
+			//bufPos = -1;
+			//bufEnd = 0;
 			dstStart = true;
 			dstLen = 0;
+			//System.out.printf("Positioned to %x secotr %d block %d%n", dsdStream.getFilePointer(), atoc.track_start, currentFrame);
 		} catch (IOException e) {
 			throw new DecodeException("IO", e);
 		}
@@ -326,6 +327,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	boolean readDSTDataBlockAsync() throws DecodeException {
 		if (processor == null) {
 			processor = new Thread(this);
+			processor.setName("DST decoder");
+			processor.setDaemon(true);
 			processor.start();
 		} else {
 			if (processor.isAlive() == false)
@@ -352,6 +355,12 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			return true;
 		} catch (InterruptedException e) {
 
+		} catch(Throwable t) {
+			if (processor != null)
+				processor.interrupt();
+			if (t instanceof ThreadDeath)
+				throw (ThreadDeath)t;
+			runException = t;
 		}
 		if (runException != null) {
 			if (runException instanceof DecodeException)
@@ -371,7 +380,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						seekSample = -1;
 					}
 				}
-
 				if (dstStart) {
 					if (currentFrame > (atoc.track_end - atoc.track_start))
 						break;
