@@ -519,6 +519,8 @@ public interface Scarletbook {
 		int position;
 		public int start;
 		public int duration;
+		public int startFrame;
+		public int durationFrame;
 
 		static final int TRACK_TYPE_TITLE = 0x01;
 		static final int TRACK_TYPE_PERFORMER = 0x02;
@@ -580,8 +582,7 @@ public interface Scarletbook {
 				}
 				put(name, new String(data, cp, 255, encoding));
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				put(name, new String(data, cp, 255));
 			}
 			return 255;
 		}

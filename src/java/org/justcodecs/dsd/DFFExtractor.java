@@ -66,7 +66,7 @@ public class DFFExtractor {
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only%n         p - play specified file instead of extraction");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only%n        p - play specified file instead of extraction");
 	}
 
 	static class ExtractionProblem extends Exception {
@@ -108,9 +108,10 @@ public class DFFExtractor {
 					if (cuef.exists() && !ove)
 						throw new ExtractionProblem("CUE " + cuef + " already exists");
 					cuew = new OutputStreamWriter(new FileOutputStream(cuef), "UTF-8");
-					cuew.write(String.format("REM GENRE %s%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
+					cuew.write(String.format("REM GENRE \"%s\"%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
 					cuew.write(String.format("REM DATE %s%n", dsf.getMetadata("Year").toString()));
 					cuew.write(String.format("REM DISCID %s%n", dsf.toc.discCatalogNumber));
+					cuew.write(String.format("REM TOTAL %02d:%02d%n", dsf.atoc.minutes, dsf.atoc.seconds));
 					cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
 					cuew.write(String.format("PERFORMER \"%s\"%n",
 							Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
@@ -124,8 +125,8 @@ public class DFFExtractor {
 									Utils.nvl(normalizeName(tracks[t].get("title")))));
 							cuew.write(String.format("    PERFORMER \"%s\"%n",
 									Utils.nvl(normalizeName(tracks[t].get("performer")))));
-							cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", tracks[t].start / 3600,
-									(tracks[t].start % 3600) / 60, tracks[t].start % 60));
+							cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n",
+									tracks[t].start / 60, tracks[t].start % 60, tracks[t].startFrame));
 						}
 					} else {
 						cuew.write(String.format("  TRACK 01 AUDIO%n"));
