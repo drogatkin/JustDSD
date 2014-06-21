@@ -91,8 +91,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				ds.seek((toc.area1Toc1Start + i) * sectorSize);
 				try {
 					tm.read(ds);
-					//System.out.printf("ttim-> %s%n", tm);
-					//continue;
 				} catch (DecodeException de) {
 
 				}
@@ -288,9 +286,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	@Override
 	void seek(long sampleNum) throws DecodeException {
 		synchronized (this) {
-			if (seekSample < 0) {
-				seekSample = sampleNum;
-				return;
+			if (processor != null && processor.isAlive()) {
+				if (seekSample < 0) {
+					seekSample = sampleNum;
+					return;
+				}
 			}
 		}
 		try {
@@ -298,21 +298,27 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				dsdStream.seek(atoc.track_start * sectorSize);
 				//new Exception().printStackTrace();
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()) {
-				if (true) {
+				currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
+				dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
+				dstSeek = currentFrame > 0;
+				/*System.out.printf("Seek %ds,  len %db, tot %ds frame %d 0f %d%n", sampleNum / getSampleRate(),
+						atoc.track_end - atoc.track_start, getSampleCount() / getSampleRate(), currentFrame,
+						atoc.track_end - atoc.track_start);*/
+				if (isDST()) {
+					do {
+						frmHeader.read(dsdStream);
+						if (frmHeader.frame_info_count == 0) {
+							currentFrame++;
+							dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
+						}
+					} while (frmHeader.frame_info_count == 0);
+					int seekSec = (int) (sampleNum / getSampleRate());
+					int currentSec = frmHeader.getMinutes(0) * 60 + frmHeader.getSeconds(0);
+					sampleNum += (seekSec - currentSec) * getSampleRate();
 					currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
 					dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
 					dstSeek = currentFrame > 0;
-					/*System.out.printf("Seek %ds,  len %db, tot %ds frame %d 0f %d%n", sampleNum / getSampleRate(),
-							atoc.track_end - atoc.track_start, getSampleCount() / getSampleRate(), currentFrame,
-							atoc.track_end - atoc.track_start);*/
-				} else {
-					// no accuracy for position in block
-					//block * 8 / getNumChannels();
-					long bn = sampleNum / block / 8 * getNumChannels();
-					if (atoc.track_end <= bn)
-						throw new DecodeException("Trying to after end sector " + atoc.track_end, null);
-					dsdStream.seek((long) (atoc.track_start + bn) * SACD_LSN_SIZE);//sectorSize);
-				}
+				} 
 			} else
 				throw new DecodeException("Trying to seek non existing sample " + sampleNum, null);
 			//bufPos = -1;
@@ -328,10 +334,12 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 
 	boolean readDSTDataBlockAsync() throws DecodeException {
 		if (processor == null) {
-			processor = new Thread(this);
-			processor.setName("DST decoder");
-			processor.setDaemon(true);
-			processor.start();
+			synchronized (this) {
+				processor = new Thread(this);
+				processor.setName("DST decoder");
+				processor.setDaemon(true);
+				processor.start();
+			}
 		} else {
 			if (processor.isAlive() == false)
 				return false;
@@ -357,11 +365,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			return true;
 		} catch (InterruptedException e) {
 
-		} catch(Throwable t) {
+		} catch (Throwable t) {
 			if (processor != null)
 				processor.interrupt();
 			if (t instanceof ThreadDeath)
-				throw (ThreadDeath)t;
+				throw (ThreadDeath) t;
 			runException = t;
 		}
 		if (runException != null) {

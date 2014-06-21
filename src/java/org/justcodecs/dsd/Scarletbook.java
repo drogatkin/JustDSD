@@ -362,7 +362,7 @@ public interface Scarletbook {
 		int getMinutes(int frmNo) {
 			if (frmNo < 0 || frmNo >= frame_info_count)
 				return -1;
-			return buf[1 + packet_info_count * AUDIO_PACKET_INFO_SIZE + frmNo * 4];
+			return buf[1 + packet_info_count * AUDIO_PACKET_INFO_SIZE + frmNo * 4]&255;
 		}
 
 		int getSeconds(int frmNo) {
