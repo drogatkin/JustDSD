@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
+import org.justcodecs.dsd.Decoder.DecodeException;
+
 public class DFFExtractor {
 	public static void main(String... args) {
-		System.out.printf("Java SACD ISO -> DFF extractor  (c) 2014 D. Rogatkin%n");
+		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2014 D. Rogatkin%n");
 		if (args.length == 0) {
 			displayHelp();
 			System.exit(1);
@@ -20,6 +22,7 @@ public class DFFExtractor {
 		boolean tde = false;
 		boolean tre = false;
 		boolean ove = false;
+		boolean ply = false;
 		for (String arg : args) {
 			if ("-d".equals(arg))
 				tde = true;
@@ -36,6 +39,8 @@ public class DFFExtractor {
 					cue = false;
 				else if ("-f".equals(arg))
 					ove = true;
+				else if ("-p".equals(arg))
+					ply = true;
 				else {
 					isoF = arg;
 					break;
@@ -44,17 +49,24 @@ public class DFFExtractor {
 		}
 		if (trgDir == null)
 			trgDir = ".";
-		try {
-			extractDff(new File(isoF), new File(trgDir), track, cue, ove);
-			System.out.printf("Done%n");
-		} catch (ExtractionProblem e) {
-			System.out.printf("Problem %s%n", e);
-		}
+		if (ply)
+			try {
+				new Player().play(isoF);
+			} catch (DecodeException e) {
+				System.out.printf("Couldn't play %s, becasue %s%n", isoF, e);
+			}
+		else
+			try {
+				extractDff(new File(isoF), new File(trgDir), track, cue, ove);
+				System.out.printf("Done%n");
+			} catch (ExtractionProblem e) {
+				System.out.printf("Problem %s%n", e);
+			}
 	}
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] <ISO path>%n where: n - no cue,%n        f - overwrite existing file%n        t -");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only%n         p - play specified file instead of extraction");
 	}
 
 	static class ExtractionProblem extends Exception {
