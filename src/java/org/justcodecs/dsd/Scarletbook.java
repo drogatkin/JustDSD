@@ -238,8 +238,9 @@ public interface Scarletbook {
 		short copyright_phonetic_offset;
 		byte data[] = new byte[1896];
 		static byte[] tb = new byte[20];
+		int start;
 
-		void read(DSDStream ds) throws DecodeException {
+		void read(DSDStream ds, int tocArea) throws DecodeException {
 			// TODO consider read in byte buffer and then extract parts
 			try {
 				ds.readFully(id, 0, id.length);
@@ -247,6 +248,7 @@ public interface Scarletbook {
 				stereo = "TWOCHTOC".equals(ID);
 				if (!stereo && "MULCHTOC".equals(ID) == false)
 					throw new DecodeException("Unsupported area toc:" + ID, null);
+				start = tocArea;
 				ds.readFully(tb, 0, 2);
 				major = (byte) (tb[0] & 255);
 				minor = (byte) (tb[1] & 255);

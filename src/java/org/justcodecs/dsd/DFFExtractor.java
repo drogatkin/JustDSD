@@ -89,6 +89,7 @@ public class DFFExtractor {
 				album = album.substring(0, album.length() - 4);
 			}
 			Scarletbook.TrackInfo[] tracks = (Scarletbook.TrackInfo[]) dsf.getMetadata("Tracks");
+			File df = new File(target, normalize(album) + ".dff");
 			long seek = 0;
 			long trackLen = 0;
 			if (tracks != null) {
@@ -110,14 +111,14 @@ public class DFFExtractor {
 					cuew = new OutputStreamWriter(new FileOutputStream(cuef), "UTF-8");
 					cuew.write(String.format("REM GENRE \"%s\"%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
 					cuew.write(String.format("REM DATE %s%n", dsf.getMetadata("Year").toString()));
-					cuew.write(String.format("REM DISCID %s%n", dsf.toc.discCatalogNumber));
+					cuew.write(String.format("REM DISCID %s%n", quoteIt(dsf.toc.discCatalogNumber)));
 					cuew.write(String.format("REM TOTAL %02d:%02d%n", dsf.atoc.minutes, dsf.atoc.seconds));
 					cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
 					cuew.write(String.format("PERFORMER \"%s\"%n",
 							Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
 					cuew.write(String.format("TITLE \"%s\"%n",
 							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")), "NA")));
-					cuew.write(String.format("FILE \"%s\" WAVE%n", cuef.getName()));
+					cuew.write(String.format("FILE \"%s\" WAVE%n", df.getName()));
 					if (tr == null) {
 						for (int t = 0; t < tracks.length; t++) {
 							cuew.write(String.format("  TRACK %02d AUDIO%n", t + 1));
@@ -125,8 +126,13 @@ public class DFFExtractor {
 									Utils.nvl(normalizeName(tracks[t].get("title")))));
 							cuew.write(String.format("    PERFORMER \"%s\"%n",
 									Utils.nvl(normalizeName(tracks[t].get("performer")))));
-							cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n",
-									tracks[t].start / 60, tracks[t].start % 60, tracks[t].startFrame));
+							if (dsf.textDuration > 0) {
+								double adj = ((double) dsf.getSampleCount()) / dsf.textDuration / dsf.getSampleRate();
+								int start = (int) Math.round(adj * tracks[t].start);
+								cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", start / 60, start % 60, 0));
+							} else
+								cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", tracks[t].start / 60,
+										tracks[t].start % 60, tracks[t].startFrame));
 						}
 					} else {
 						cuew.write(String.format("  TRACK 01 AUDIO%n"));
@@ -139,7 +145,6 @@ public class DFFExtractor {
 					cuew.flush();
 				}
 			}
-			File df = new File(target, normalize(album) + ".dff");
 			if (df.exists() && !ove)
 				throw new ExtractionProblem("File " + df + " already exists");
 			dff = new RandomAccessFile(df, "rw");
@@ -210,10 +215,16 @@ public class DFFExtractor {
 				result.append(name.charAt(i));
 			}
 		}
-		return result.toString();
+		return result.toString().trim();
 	}
 
-	static long writeDFFHeader(RandomAccessFile dff, DISOFormat dsf) throws IOException {
+	private static String quoteIt(String s) {
+		if (s.indexOf(' ') < 0)
+			return s;
+		return String.format("\"%s\"", normalizeName(s));
+	}
+
+	private static long writeDFFHeader(RandomAccessFile dff, DISOFormat dsf) throws IOException {
 		/*
 		 *  write DSDIFF(DSD) header
 		 *  ----------------------------
