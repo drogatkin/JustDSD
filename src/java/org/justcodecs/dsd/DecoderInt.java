@@ -1,16 +1,11 @@
 package org.justcodecs.dsd;
 
 
-public class DecoderInt extends Decoder implements FiltersInt {
+public class DecoderInt extends Decoder /*implements FiltersInt */{
 	int lookupTableI[][];
-	int scale;
-	int clipping;
 
 	@Override
 	protected int initLookupTable() throws DecodeException {
-		scale = ((1 << pcmf.bitsPerSample) - 1) >> 1;
-		clipping = scale;
-		//scale = (1 << 16) - 2;
 		switch (ratio) {
 		case 8:
 			initLookupTableI(coefs_352, tzero_352);
@@ -27,6 +22,14 @@ public class DecoderInt extends Decoder implements FiltersInt {
 		return lookupTableI.length;
 	}
 	
+
+	@Override
+	protected void initParameters() {		
+		super.initParameters();
+		scale = ((1 << pcmf.bitsPerSample) - 1);// >> 1;
+		clipping = scale>>1;
+	}
+
 
 	@Override
 	public int decodePCM(int[]... channels) throws DecodeException {

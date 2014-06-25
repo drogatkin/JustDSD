@@ -9,8 +9,6 @@ public class ChunkDSD extends BaseChunk {
 	void read(DSDStream ds) throws DecodeException {
 		super.read(ds);
 		dataEnd = start+size;
-		skip(ds);
+		//skip(ds);
 	}
-	
-	
 }

@@ -21,6 +21,8 @@ public class Decoder implements Filters {
 	protected DSDFormat dsdf;
 	//protected long currentSample;
 	protected int ratio;
+	protected int scale;
+	protected int clipping;
 
 	private double[][] lookupTable;
 	Random rnd;
@@ -29,36 +31,58 @@ public class Decoder implements Filters {
 		if (dsdf == null)
 			throw new DecodeException("Target PCM format has to be set after calling init", null);
 		pcmf = f;
-		ratio = getSampleRate() % pcmf.sampleRate;
-		if (ratio != 0)
-			throw new DecodeException("PCM sample rate doesn't multiplies 44100", null);
-		ratio = getSampleRate() / pcmf.sampleRate;
+		if (getSampleRate() % pcmf.sampleRate != 0)
+			throw new DecodeException("PCM sample rate doesn't multiply evenly 44100", null);
+		initParameters();
 		dsdf.initBuffers(initLookupTable());
-		rnd = new Random();
+		rnd = new Random();		
 	}
+	
 
 	public void init(DSDFormat f) throws DecodeException {
 		dsdf = f;
 	}
 
 	public int getSampleRate() {
+		if (dsdf == null)
+			return 0;
 		return dsdf.getSampleRate();
 	}
 
 	public long getSampleCount() {
+		if (dsdf == null)
+			return 0;
 		return dsdf.getSampleCount();
 	}
 	
 	public boolean isDST() {
+		if (dsdf == null)
+			return false;
 		return dsdf.isDST();
 	}
 
 	public void seek(long sampleNum) throws DecodeException {
+		if (dsdf == null)
+			return;
 		dsdf.seek(sampleNum);
 	}
 
+	public void suspend() throws DecodeException {
+		if (dsdf == null)
+			return;
+		dsdf.sleep();
+	}
+	
 	public void dispose() {
+		if (dsdf == null)
+			return;
 		dsdf.close();
+	}
+	
+	protected void initParameters() {
+		ratio = getSampleRate() / pcmf.sampleRate;
+		// 16 bits 96 db Math.pow(10.0,96/20)*Math.pow(2.0,16-1)
+		scale = clipping =((1 << pcmf.bitsPerSample) - 1) >> 1;
 	}
 
 	protected int initLookupTable() throws DecodeException {
@@ -213,9 +237,7 @@ public class Decoder implements Filters {
 		return slen;
 	}
 
-	public int decodePCM(int[]... channels) throws DecodeException {
-		// 16 bits 96 db Math.pow(10.0,96/20)*Math.pow(2.0,16-1)
-		int scale = ((1 << pcmf.bitsPerSample) - 1) >> 1;
-		return getSamples1(scale, 0, scale, channels);
+	public int decodePCM(int[]... channels) throws DecodeException {		
+		return getSamples1(scale, 0, clipping, channels);
 	}
 }

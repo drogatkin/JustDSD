@@ -26,6 +26,14 @@ public abstract class DSDFormat<B> {
 		dsdStream = ds;
 		attrs = new HashMap<String,Object>();
 	}
+	
+	/** puts any parallel processing activities in sleep
+	 * 
+	 * @throws DecodeException if sleep cwasn't initiated successfully
+	 */
+	public void sleep() throws DecodeException {
+		
+	}
 
 	abstract boolean readDataBlock() throws DecodeException;	
 	
@@ -60,9 +68,9 @@ public abstract class DSDFormat<B> {
 	@Override
 	public String toString() {
 		String tracks = Arrays.toString((Object[])(attrs==null?null:attrs.get("Tracks")));
-		return "DSDFormat [attrs=" + attrs + ", rate=" + getSampleRate() +", channels=" + getNumChannels() + ", tracks:" + tracks + "]";
+		return "DSDFormat [attrs=" + attrs + ", rate=" + getSampleRate() +", channels=" + getNumChannels() + ", DST=" + isDST()+ ", tracks:" + tracks + "]";
 	}
 	
-	//protected void setMetadata(String)
+	//protected void setMetadata(String){}
 
 }

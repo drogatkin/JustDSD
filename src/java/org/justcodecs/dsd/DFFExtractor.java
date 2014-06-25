@@ -123,9 +123,10 @@ public class DFFExtractor {
 						for (int t = 0; t < tracks.length; t++) {
 							cuew.write(String.format("  TRACK %02d AUDIO%n", t + 1));
 							cuew.write(String.format("    TITLE \"%s\"%n",
-									Utils.nvl(normalizeName(tracks[t].get("title")))));
-							cuew.write(String.format("    PERFORMER \"%s\"%n",
-									Utils.nvl(normalizeName(tracks[t].get("performer")))));
+									Utils.nvl(normalizeName(tracks[t].get("title")), "NA")));
+							if (tracks[t].get("performer") != null)
+								cuew.write(String.format("    PERFORMER \"%s\"%n",
+										normalizeName(tracks[t].get("performer"))));
 							if (dsf.textDuration > 0) {
 								double adj = ((double) dsf.getSampleCount()) / dsf.textDuration / dsf.getSampleRate();
 								int start = (int) Math.round(adj * tracks[t].start);
@@ -153,6 +154,7 @@ public class DFFExtractor {
 			dsf.initBuffers(0);
 			byte samples[] = dsf.getSamples();
 			dsf.seek(seek); // TODO track
+			System.out.printf("Extracting... it may take awhile... ");
 			while (dsf.readDataBlock()) {
 				dff.write(samples, 0, dsf.bufEnd);
 				dsf.bufPos = dsf.bufEnd;
@@ -196,7 +198,7 @@ public class DFFExtractor {
 				result.append(album.charAt(i));
 			}
 		}
-		return result.toString();
+		return result.toString().trim();
 	}
 
 	private static String normalizeName(String name) {

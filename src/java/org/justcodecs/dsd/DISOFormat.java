@@ -35,6 +35,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	ArrayBlockingQueue<byte[]> decodedBuffs = new ArrayBlockingQueue<byte[]>(QUEUE_SIZE);
 	ArrayBlockingQueue<byte[]> usedBuffs = new ArrayBlockingQueue<byte[]>(QUEUE_SIZE);
 	long seekSample;
+	boolean sleepRequested;
 
 	@Override
 	public void init(DSDStream ds) throws DecodeException {
@@ -299,10 +300,10 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				//new Exception().printStackTrace();
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()) {
 				//System.out.printf("actual samples %d (%ds) text samples %d (%ds) search %d(%ds)%n",getSampleCount(), getSampleCount()/getSampleRate(),
-					//	((long)textDuration)*getSampleRate(), textDuration, sampleNum, sampleNum/getSampleRate());
+				//	((long)textDuration)*getSampleRate(), textDuration, sampleNum, sampleNum/getSampleRate());
 				if (textDuration > 0) {
-					double adj = ((double)getSampleCount())/textDuration/getSampleRate();
-					sampleNum = Math.round(adj*sampleNum);
+					double adj = ((double) getSampleCount()) / textDuration / getSampleRate();
+					sampleNum = Math.round(adj * sampleNum);
 					//System.out.printf("adjusted %d (%ds) / %f%n", sampleNum, sampleNum/getSampleRate(), adj);
 				}
 				if (sampleNum >= getSampleCount())
@@ -457,15 +458,35 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				decodedBuffs = null;
 			}
 		}
+		if (sleepRequested) {
+			processor = null;
+			sleepRequested = false;
+		}
 	}
 
 	byte[] getProcessed() throws InterruptedException {
+		synchronized (this) {
+			if (sleepRequested)
+				throw new InterruptedException();
+		}
 		return usedBuffs.take();
 	}
 
 	void putForProcessing(byte[] dsdBuff) throws InterruptedException {
 		//System.out.printf("Added buf%n");
 		decodedBuffs.put(dsdBuff);
+	}
+
+	@Override
+	public void sleep() throws DecodeException {
+		super.sleep();
+		synchronized (this) {
+			if (sleepRequested == false) {
+				sleepRequested = true;
+				if (processor != null && processor.isAlive())
+					processor.interrupt();
+			}
+		}
 	}
 
 	@Override
