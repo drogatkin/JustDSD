@@ -117,7 +117,7 @@ public class DFFExtractor {
 					cuew.write(String.format("PERFORMER \"%s\"%n",
 							Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
 					cuew.write(String.format("TITLE \"%s\"%n",
-							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")), "NA")));
+							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")), normalizeName((String) dsf.getMetadata("Album")), "NA")));
 					cuew.write(String.format("FILE \"%s\" WAVE%n", df.getName()));
 					if (tr == null) {
 						for (int t = 0; t < tracks.length; t++) {

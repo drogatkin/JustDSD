@@ -595,7 +595,7 @@ public class DSTDecoder {
 	short[][] BitStream11; /* Contains the bitstream of a complete        */
 	//byte[][] BitStream11;
 	byte BitMask[] = new byte[RESOL];
-	
+	ACData AC;
 	// precalculated coeff for optimization
 	short[][][] LT_ICoefI = new short[2 * MAX_CHANNELS][16][256];
 	int[][] LT_Status = new int[MAX_CHANNELS][16];
@@ -1393,7 +1393,7 @@ public class DSTDecoder {
 		for (int BitNr = 0; BitNr < 8; BitNr++) {
 			BitMask[BitNr] = (byte) ((1 << BitNr) & 255);
 		}
-
+		AC = new ACData();
 	}
 
 	/***************************************************************************/
@@ -1514,7 +1514,6 @@ public class DSTDecoder {
 		if (FrameHdr.DSTCoded == 1) {
 			//System.out.printf("Decoding%n");
 			int i;
-			ACData AC = new ACData();
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.FSeg, FrameHdr.Filter4Bit);
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.PSeg, FrameHdr.Ptable4Bit);
 

@@ -9,10 +9,10 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	ChunkFRM8 frm;
 	byte buff[];
 	int block = 2048;
+	long filePosition;
 
 	@Override
-	public
-	void init(DSDStream ds) throws DecodeException {
+	public void init(DSDStream ds) throws DecodeException {
 		super.init(ds);
 		BaseChunk c = BaseChunk.create(dsdStream, null);
 		if (c instanceof ChunkFRM8 == false)
@@ -29,12 +29,14 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			e.printStackTrace();
 		}*/
 	}
-	FileOutputStream fo ;
+
+	FileOutputStream fo;
 	int cnt;
+
 	@Override
 	boolean readDataBlock() throws DecodeException {
 		try {
-			if (dsdStream.getFilePointer() >= frm.props.dsd.dataEnd)
+			if (filePosition /*dsdStream.getFilePointer()*/>= frm.props.dsd.dataEnd)
 				return false;
 			if (bufPos < 0)
 				bufPos = 0;
@@ -46,17 +48,19 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			if (toRead > frm.props.dsd.dataEnd - dsdStream.getFilePointer())
 				toRead = (int) (frm.props.dsd.dataEnd - dsdStream.getFilePointer());
 			dsdStream.readFully(buff, delta, toRead);
-				
+			filePosition += toRead;
+
 			if (fo != null) {
 				fo.write(buff, delta, toRead);
-				cnt+= toRead;
-				if (cnt > 200*1024) {
-					fo.close();fo = null;
+				cnt += toRead;
+				if (cnt > 200 * 1024) {
+					fo.close();
+					fo = null;
 				}
 			}
 			//System.out.printf("%s%n", Utils.toHexString(0, 100, buff));
 			//if (true)
-				//throw new DecodeException("test", null);
+			//throw new DecodeException("test", null);
 			bufPos = 0;
 			bufEnd = toRead + delta;
 		} catch (IOException e) {
@@ -99,13 +103,14 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	void seek(long sampleNum) throws DecodeException {
 		//if (sampleNum < getSampleCount())
 		try {
-			dsdStream.seek(frm.props.dsd.start + (sampleNum / 8)*getNumChannels());
+			filePosition = frm.props.dsd.start + (sampleNum / 8) * getNumChannels();
+			dsdStream.seek(filePosition);
 			//System.out.printf("Start play %d for sample %d%n", dsdStream.getFilePointer(), sampleNum);
 			bufPos = -1;
 			bufEnd = 0;
 		} catch (IOException e) {
+			// TODO invalidate filePosition
 			throw new DecodeException("", e);
 		}
 	}
-
 }
