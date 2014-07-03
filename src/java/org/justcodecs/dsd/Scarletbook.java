@@ -2,6 +2,7 @@ package org.justcodecs.dsd;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -53,8 +54,8 @@ public interface Scarletbook {
 			, "ISO8859_1_ESC" // = 7    // ISO 8859-1, single byte set escape sequences allowed
 	};
 
-	static final String CHARSET[] = { "US-ASCII", "ISO646-JP", "ISO-8859-1", "SHIFT_JISX0213", "KSC5601.1987-0",
-			"GB2312.1980-0", "BIG5", "ISO-8859-1" };
+	static final String CHARSET[] = { "US-ASCII", "ISO646-US", "ISO-8859-1", "x-SJIS_0213", "EUC-KR",
+			"GB2312", "BIG5", "ISO-8859-1" };
 
 	static final String GENRE[] = { "Not used", "Not defined", "Adult Contemporary", "Alternative Rock",
 			"Children's Music", "Classical", "Contemporary Christian", "Country", "Dance", "Easy Listening", "Erotic",
@@ -606,8 +607,14 @@ public interface Scarletbook {
 		}
 
 		void read(DSDStream ds, String encoding) throws DecodeException {
-			//if (encoding == null)
-			encoding = "UTF-8";
+			if (encoding != null)
+				try {
+					Charset.forName(encoding).encode("test");
+				} catch (Exception e) {
+					encoding = null;
+				}
+			if (encoding == null)
+				encoding = "UTF-8";
 			try {
 				ds.readFully(id, 0, id.length);
 				String ID = new String(id);
