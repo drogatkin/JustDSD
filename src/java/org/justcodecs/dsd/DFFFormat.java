@@ -36,7 +36,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	@Override
 	boolean readDataBlock() throws DecodeException {
 		try {
-			if (filePosition /*dsdStream.getFilePointer()*/>= frm.props.dsd.dataEnd)
+			if (filePosition >= frm.props.dsd.dataEnd)
 				return false;
 			if (bufPos < 0)
 				bufPos = 0;
@@ -45,8 +45,8 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			if (delta > 0)
 				System.arraycopy(buff, bufPos, buff, 0, delta);
 			int toRead = block * getNumChannels();
-			if (toRead > frm.props.dsd.dataEnd - dsdStream.getFilePointer())
-				toRead = (int) (frm.props.dsd.dataEnd - dsdStream.getFilePointer());
+			if (toRead > frm.props.dsd.dataEnd - filePosition)
+				toRead = (int) (frm.props.dsd.dataEnd - filePosition);
 			dsdStream.readFully(buff, delta, toRead);
 			filePosition += toRead;
 
