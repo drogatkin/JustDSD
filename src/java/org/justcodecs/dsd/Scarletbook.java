@@ -97,6 +97,12 @@ public interface Scarletbook {
 					return;
 				code = new String(tb, 0, 2);
 				encoding = CHARSET[tb[2] & 7];
+				try {
+					Charset.forName(encoding).encode("test");
+				} catch (Exception e) {
+					encoding = "UTF-8";
+				}
+
 			} catch (IOException e) {
 				throw new DecodeException("IO", e);
 			} // TODO invalid index
@@ -449,8 +455,6 @@ public interface Scarletbook {
 		HashMap<String, String> textInfo = new HashMap<String, String>();
 
 		void read(DSDStream ds, String encoding) throws DecodeException {
-			//if (encoding == null)
-			encoding = "UTF-8";
 			try {
 				ds.readFully(id, 0, id.length);
 				String ID = new String(id);
@@ -546,7 +550,7 @@ public interface Scarletbook {
 			//System.out.printf("Track for %d%n", pos);
 		}
 
-		public void fill(byte[] data, int off) {
+		public void fill(byte[] data, int off, String encoding) {
 			int cp = position - off;
 			byte amount = data[cp];
 			//System.out.printf("Amount %d,  pos %d%n", amount, cp);
@@ -557,11 +561,11 @@ public interface Scarletbook {
 				if (data[cp] != 0) {
 					switch (type & 255) {
 					case TRACK_TYPE_TITLE:
-						cp += addText(data, "title", cp, "UTF-8");
+						cp += addText(data, "title", cp, encoding);
 						//System.out.printf("Title %s%n", get("title"));
 						break;
 					case TRACK_TYPE_PERFORMER:
-						cp += addText(data, "performer", cp, "UTF-8");
+						cp += addText(data, "performer", cp, encoding);
 						break;
 					default:
 						while (cp < data.length && data[cp] != 0)
@@ -607,14 +611,6 @@ public interface Scarletbook {
 		}
 
 		void read(DSDStream ds, String encoding) throws DecodeException {
-			if (encoding != null)
-				try {
-					Charset.forName(encoding).encode("test");
-				} catch (Exception e) {
-					encoding = null;
-				}
-			if (encoding == null)
-				encoding = "UTF-8";
 			try {
 				ds.readFully(id, 0, id.length);
 				String ID = new String(id);
@@ -640,7 +636,7 @@ public interface Scarletbook {
 				ds.readFully(data, 0, data.length);
 				for (int i = 0; i < infos.length; i++) {
 					if (infos[i] != null) {
-						infos[i].fill(data, off);
+						infos[i].fill(data, off, encoding);
 					}
 				}
 			} catch (IOException e) {
