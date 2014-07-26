@@ -35,9 +35,8 @@ public class Decoder implements Filters {
 			throw new DecodeException("PCM sample rate doesn't multiply evenly 44100", null);
 		initParameters();
 		dsdf.initBuffers(initLookupTable());
-		rnd = new Random();		
+		rnd = new Random();
 	}
-	
 
 	public void init(DSDFormat f) throws DecodeException {
 		dsdf = f;
@@ -54,7 +53,7 @@ public class Decoder implements Filters {
 			return 0;
 		return dsdf.getSampleCount();
 	}
-	
+
 	public boolean isDST() {
 		if (dsdf == null)
 			return false;
@@ -72,17 +71,17 @@ public class Decoder implements Filters {
 			return;
 		dsdf.sleep();
 	}
-	
+
 	public void dispose() {
 		if (dsdf == null)
 			return;
 		dsdf.close();
 	}
-	
+
 	protected void initParameters() {
 		ratio = getSampleRate() / pcmf.sampleRate;
 		// 16 bits 96 db Math.pow(10.0,96/20)*Math.pow(2.0,16-1)
-		scale = clipping =((1 << pcmf.bitsPerSample) - 1) >> 1;
+		scale = clipping = ((1 << pcmf.bitsPerSample) - 1) >> 1;
 	}
 
 	protected int initLookupTable() throws DecodeException {
@@ -101,14 +100,12 @@ public class Decoder implements Filters {
 		}
 		return lookupTable.length;
 	}
-	
-	
 
 	protected double[][] getLookupTable() {
 		return lookupTable;
 	}
 
-	protected  void setLookupTable(double[][] lookupTable) {
+	protected void setLookupTable(double[][] lookupTable) {
 		this.lookupTable = lookupTable;
 	}
 
@@ -202,8 +199,6 @@ public class Decoder implements Filters {
 						sum += lookupTable[t][byt];
 					}
 				sum = sum * scale;
-				if (c == 0 && false)
-					System.out.printf(" %f%n", sum);
 				// dither before rounding/truncating
 				if (tpdfDitherPeakAmplitude > 0) {
 					// TPDF dither
@@ -237,7 +232,45 @@ public class Decoder implements Filters {
 		return slen;
 	}
 
-	public int decodePCM(int[]... channels) throws DecodeException {		
+	public int decodePCM(int[]... channels) throws DecodeException {
 		return getSamples1(scale, 0, clipping, channels);
+	}
+
+	public int decodeDSD(int channels, byte[] samples) throws DecodeException {
+		if (channels < dsdf.getNumChannels())
+			throw new DecodeException("Channels to decode to less than in source", null);
+		if (samples.length % channels != 0)
+			throw new DecodeException("Buffer length isn't multiply of number channels", null);
+		if (dsdf.bufPos < 0 || dsdf.bufPos > dsdf.bufEnd) {
+			if (dsdf.readDataBlock() == false)
+				return -1;
+		}
+		Object dsamples = dsdf.getSamples();
+		if (dsamples instanceof byte[][]) {
+			byte[][] buff = (byte[][]) dsamples;
+			int si = 0;
+			do {
+				for (int c = 0; c < channels; c++) {
+					samples[si++] = buff[c][dsdf.bufPos];
+				}
+				dsdf.bufPos++;
+				if (si >= samples.length)
+					return si;
+				if (dsdf.bufPos > dsdf.bufEnd) {
+					if (dsdf.readDataBlock() == false)
+						return si;
+				}
+			} while (true);
+		} else if (dsamples instanceof byte[]) {
+			byte[] buff = (byte[]) dsamples;
+			if (channels == dsdf.getNumChannels()) {
+				int si = Math.min(buff.length, -dsdf.bufPos + dsdf.bufEnd);
+				System.arraycopy(buff, 0, samples, 0, si);
+				dsdf.bufPos += si;
+				return si;
+			} else
+				throw new DecodeException("Channels down mixing isn't implemented yet", null);
+		} else
+			throw new DecodeException("Unsupported buffer type", null);
 	}
 }
