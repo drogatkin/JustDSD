@@ -604,7 +604,7 @@ public interface Scarletbook {
 	static class TrackText {
 		byte[] id = new byte[8];
 		TrackInfo[] infos;
-		static byte data[] = new byte[2000];
+		static byte data[] = new byte[4000];
 
 		public TrackText(byte trackCount) {
 			infos = new TrackInfo[trackCount];
