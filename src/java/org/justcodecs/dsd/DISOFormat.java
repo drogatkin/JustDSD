@@ -302,8 +302,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				//System.out.printf("actual samples %d (%ds) text samples %d (%ds) search %d(%ds)%n",getSampleCount(), getSampleCount()/getSampleRate(),
 				//	((long)textDuration)*getSampleRate(), textDuration, sampleNum, sampleNum/getSampleRate());
 				if (textDuration > 0) {
-					double adj = ((double) getSampleCount()) / textDuration / getSampleRate();
-					sampleNum = Math.round(adj * sampleNum);
+					sampleNum = Math.round(getTimeAdjustment() * sampleNum);
 					//System.out.printf("adjusted %d (%ds) / %f%n", sampleNum, sampleNum/getSampleRate(), adj);
 				}
 				if (sampleNum >= getSampleCount())
@@ -340,6 +339,12 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		} catch (IOException e) {
 			throw new DecodeException("IO", e);
 		}
+	}
+	
+	public double getTimeAdjustment() {
+		if (textDuration <= 0)
+			return 1.0;
+		return ((double) getSampleCount()) / textDuration / getSampleRate();
 	}
 
 	boolean readDSTDataBlockAsync() throws DecodeException {
