@@ -50,13 +50,16 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				ds.seek(START_OF_MASTER_TOC * SACD_PSN_SIZE + 12);
 				toc.read(ds);
 				sectorSize = SACD_PSN_SIZE;
+				//System.out.printf("!!%n");
 			}
-			//System.out.printf("SACD image %s at sector %d%n", toc, sectorSize);
+			//System.out.printf("[SACD] image %s at sector %d start area %x%n", toc, sectorSize, toc.area1Toc1Start * sectorSize);
 			ds.seek(toc.area1Toc1Start * sectorSize);
 			atoc = new AreaTOC();
-			atoc.read(ds, toc.area1Toc1Start);
+			if (toc.area1Toc1Start > 0)
+				atoc.read(ds, toc.area1Toc1Start);
 			if (!atoc.stereo) {
-				ds.seek(toc.area_2_toc_1_start * sectorSize);
+				ds.seek(toc.area_2_toc_1_start * sectorSize + (sectorSize == SACD_PSN_SIZE?12:0));
+				//System.out.printf("reading %x%n", toc.area_2_toc_1_start * sectorSize);
 				atoc.read(ds, toc.area_2_toc_1_start);
 				if (!atoc.stereo)
 					throw new DecodeException("No two channels track found", null);
