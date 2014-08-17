@@ -16,7 +16,7 @@ public abstract class TextChunk extends BaseChunk {
 			setText(new String(tb));
 			skip(ds);
 		} catch (IOException e) {
-			throw new DecodeException("", e);
+			throw new DecodeException("IO", e);
 		}
 	}
 	abstract  void setText(String string);

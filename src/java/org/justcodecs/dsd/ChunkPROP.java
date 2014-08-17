@@ -37,11 +37,14 @@ public class ChunkPROP extends BaseChunk {
 						break;
 					}
 				}
-				//System.out.printf("--->%s at %d s+s%d%n", c, ds.getFilePointer(), c.start+c.size);
+				//System.out.printf("--->%s at %x s+s%x (%x)%n", c, ds.getFilePointer(), c.start+c.size, c.start);
 				if (ds.getFilePointer() >= parent.start + parent.size)
 					break;
-
 			}
+		} catch (DecodeException e) {
+			if (dsd == null)
+				throw e;
+			// still can be playable
 		} catch (IOException e) {
 			throw new DecodeException("IO", e);
 		}

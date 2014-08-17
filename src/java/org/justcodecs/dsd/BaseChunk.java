@@ -28,11 +28,10 @@ public class BaseChunk {
 			result.read(ds);
 			return result;
 		} catch (IOException e) {
-			throw new DecodeException("", e);
+			throw new DecodeException("IO", e);
 		} catch (Exception e) {
 			throw new DecodeException("Unsupported chunk:" + new String(IDBuf), e);
 		}
-
 	}
 
 	void read(DSDStream ds) throws DecodeException {
@@ -40,6 +39,8 @@ public class BaseChunk {
 			size = ds.readLong(true);
 			start = ds.getFilePointer();
 			//System.out.printf("Current %x,  size %d%n", start, size);
+			if (size <= 0)
+				throw new DecodeException("Invalid size "+size +" of "+new String(IDBuf), null);			
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}
