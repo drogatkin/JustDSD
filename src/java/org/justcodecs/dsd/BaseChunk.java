@@ -13,7 +13,15 @@ public class BaseChunk {
 	BaseChunk parent;
 	static byte[] IDBuf = new byte[4];
 
+	public static BaseChunk create(DSDStream ds, String encoding) throws DecodeException {
+		return create(ds, null, encoding);
+	}
+	
 	public static BaseChunk create(DSDStream ds, BaseChunk parent) throws DecodeException {
+		return create(ds, parent, null);
+	}
+	
+	public static BaseChunk create(DSDStream ds, BaseChunk parent, String encoding) throws DecodeException {
 		try {
 			ds.readFully(IDBuf, 0, 4);
 			BaseChunk result;
@@ -25,6 +33,8 @@ public class BaseChunk {
 				result = new ChunkUNK();
 			}
 			result.parent = parent;
+			if (result instanceof ChunkFRM8)
+				((ChunkFRM8)result).encoding = encoding;
 			result.read(ds);
 			return result;
 		} catch (IOException e) {
@@ -59,4 +69,13 @@ public class BaseChunk {
 		return this.getClass().getCanonicalName() + " [size=" + size + ", data=" + Arrays.toString(data) + "]";
 	}
 
+	ChunkFRM8 getFRM8() {
+		BaseChunk c = this;
+		while(c != null) {
+			if (c instanceof ChunkFRM8)
+				return (ChunkFRM8)c;
+			c = c.parent;
+		}
+		return null;
+	}
 }

@@ -14,14 +14,12 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	@Override
 	public void init(DSDStream ds) throws DecodeException {
 		super.init(ds);
-		BaseChunk c = BaseChunk.create(dsdStream, null);
+		BaseChunk c = BaseChunk.create(dsdStream, metadataCharset);
 		if (c instanceof ChunkFRM8 == false)
 			throw new DecodeException("Invalid diff format, no FRAME chunk", null);
 		//c.skip(dsdStream);
 		frm = (ChunkFRM8) c;
-		attrs.put("Artist", frm.artist);
-		attrs.put("Title", frm.title);
-		attrs.put("Album", frm.album);
+		attrs.putAll(frm.metaAttrs);
 		/*try {
 			fo = new FileOutputStream("test.dffdst");
 		} catch (FileNotFoundException e) {

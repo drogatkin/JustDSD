@@ -28,7 +28,7 @@ public class ChunkPROP extends BaseChunk {
 				else if (c instanceof ChunkCMPR)
 					comp = ((ChunkCMPR) c).compression;
 				else if (c instanceof ChunkDITI)
-					((ChunkFRM8) parent).title = ((ChunkDITI) c).title;
+					getFRM8().metaAttrs .put("Title",((ChunkDITI) c).title);
 				else if (c instanceof ChunkDSD) {
 					dsd = (ChunkDSD) c;
 					try {
@@ -36,6 +36,8 @@ public class ChunkPROP extends BaseChunk {
 					} catch (DecodeException e) {
 						break;
 					}
+				} else if (c instanceof ChunkID3) {
+					
 				}
 				//System.out.printf("--->%s at %x s+s%x (%x)%n", c, ds.getFilePointer(), c.start+c.size, c.start);
 				if (ds.getFilePointer() >= parent.start + parent.size)

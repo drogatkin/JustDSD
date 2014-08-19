@@ -61,7 +61,7 @@ public class ChunkCOMT extends BaseChunk {
 				comments[j] = new Comment();
 				comments[j].read(ds, c);
 				if (comments[j].cmtType == General_album)
-					((ChunkFRM8)parent.parent).album = comments[j].commentText; 
+					getFRM8().metaAttrs.put("Album", comments[j].commentText); 
 			}
 			//System.out.printf("Comms:%s%n", Arrays.toString(comments));
 		} catch (IOException e) {
