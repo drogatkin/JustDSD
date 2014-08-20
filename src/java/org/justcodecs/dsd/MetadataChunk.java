@@ -33,6 +33,7 @@ public class MetadataChunk {
 				} catch(Exception e) {
 					
 				}
+			storeAttr(id3, "Track", ID3v2.TRACK);
 			storeAttr(id3, "Genre", ID3v2.GENRE);
 			byte[] pic = id3.getPicture().getBinaryContent();
 			//System.out.printf("Pic%s%n", pic);
