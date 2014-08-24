@@ -25,12 +25,18 @@ public class ChunkID3 extends BaseChunk {
 			storeAttr(f8.metaAttrs, id3, "Artist", ID3v2.ARTIST);
 			storeAttr(f8.metaAttrs, id3, "Title", ID3v2.TITLE);
 			storeAttr(f8.metaAttrs, id3, "Year", ID3v2.YEAR);
-			storeAttr(f8.metaAttrs, id3, "Track", ID3v2.TRACK);
 			if (f8.metaAttrs.containsKey("Year"))
 				try {
 					f8.metaAttrs.put("Year", new Integer((String)f8.metaAttrs.get("Year")));
 				} catch(Exception e) {
-					
+					f8.metaAttrs.remove("Year");
+				}
+			storeAttr(f8.metaAttrs, id3, "Track", ID3v2.TRACK);
+			if (f8.metaAttrs.containsKey("Track"))
+				try {
+					f8.metaAttrs.put("Track", new Integer((String)f8.metaAttrs.get("Track")));
+				} catch(Exception e) {
+					f8.metaAttrs.remove("Track");
 				}
 			storeAttr(f8.metaAttrs, id3, "Genre", ID3v2.GENRE);
 			byte[] pic = id3.getPicture().getBinaryContent();
