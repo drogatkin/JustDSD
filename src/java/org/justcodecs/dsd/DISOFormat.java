@@ -85,14 +85,18 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			ctx.read(ds, atoc.locales[0].encoding);
 			TrackText ttx = new TrackText(atoc.track_count);
 			TrackTime tm = new TrackTime();
+			boolean ttxf = false;
 			for (int i = 1; i < atoc.size; i++) {
-				ds.seek((atoc.start + i) * sectorSize);
-				try {
-					ttx.read(ds, atoc.locales[0].encoding);
-					//System.out.printf("tt-> %s%n", ttx);
-					continue;
-				} catch (DecodeException de) {
-					ttx.infos = new TrackInfo[0];
+				if (!ttxf) {
+					ds.seek((atoc.start + i) * sectorSize);
+					try {
+						ttx.read(ds, atoc.locales[0].encoding);
+						ttxf = true;
+						//System.out.printf("tt-> %s%n", ttx);
+						continue;
+					} catch (DecodeException de) {
+
+					}
 				}
 				ds.seek((atoc.start + i) * sectorSize);
 				try {
@@ -101,6 +105,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 
 				}
 			}
+			if (!ttxf)
+				ttx.infos = new TrackInfo[0];
 			for (int i = 0; i < ttx.infos.length; i++) {
 				ttx.infos[i].start = tm.getStart(i);
 				ttx.infos[i].duration = tm.getDuration(i);
