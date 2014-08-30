@@ -619,7 +619,7 @@ public interface Scarletbook {
 					throw new DecodeException("Track text not found " + ID, null);
 				}
 				int off = 0;
-				//System.out.printf("Entries:%d%n", infos.length);
+				//System.out.printf("==Entries:%d%n", infos.length);
 				for (int i = 0; i < infos.length; i++) {
 					short pos = ds.readShort(true);
 					if (pos > 0) {

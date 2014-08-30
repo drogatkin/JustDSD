@@ -5,6 +5,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
+import org.justcodecs.dsd.Scarletbook.TrackInfo;
 
 public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnable {
 	final static int QUEUE_SIZE = 4;
@@ -91,7 +92,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					//System.out.printf("tt-> %s%n", ttx);
 					continue;
 				} catch (DecodeException de) {
-
+					ttx.infos = new TrackInfo[0];
 				}
 				ds.seek((atoc.start + i) * sectorSize);
 				try {
