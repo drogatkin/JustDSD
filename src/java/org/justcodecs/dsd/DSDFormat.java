@@ -49,7 +49,8 @@ public abstract class DSDFormat<B> {
 
 	public void close() {
 		try {
-			dsdStream.close();
+			if(dsdStream != null)
+				dsdStream.close();
 		} catch (IOException e) {
 
 		}

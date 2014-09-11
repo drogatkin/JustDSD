@@ -9,6 +9,13 @@ import java.io.RandomAccessFile;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
 public class DFFExtractor {
+
+	public static interface Progress {
+		void init(long total);
+
+		void progress(long current);
+	}
+
 	public static void main(String... args) {
 		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2014 D. Rogatkin%n");
 		if (args.length == 0) {
@@ -57,8 +64,30 @@ public class DFFExtractor {
 			}
 		else
 			try {
-				extractDff(new File(isoF), new File(trgDir), track, cue, ove);
-				System.out.printf("Done%n");
+				System.out.printf("Extracting... it may take awhile... ");
+				long st = System.currentTimeMillis();
+				extractDff(new File(isoF), new File(trgDir), track, cue, ove, new Progress() {
+					long t;
+					long s;
+
+					@Override
+					public void init(long total) {
+						t = total;
+						s = System.currentTimeMillis();
+						System.out.printf("%n");
+					}
+
+					@Override
+					public void progress(long current) {
+						long r = (System.currentTimeMillis()-s)*(t-current)/current / 1000;
+						System.out.printf("%3.2f%% to complete in %d:%02d  \r", current * 100.0 / t, r/60, r%60);
+
+					}
+
+				});
+				st = System.currentTimeMillis() - st;
+				st /= 1000;
+				System.out.printf("Done in %d:%02d             %n", st / 60, st % 60);
 			} catch (ExtractionProblem e) {
 				System.out.printf("Problem %s%n", e);
 			}
@@ -75,7 +104,8 @@ public class DFFExtractor {
 		}
 	}
 
-	static void extractDff(File iso, File target, int track, boolean cue, boolean ove) throws ExtractionProblem {
+	static void extractDff(File iso, File target, int track, boolean cue, boolean ove, Progress progress)
+			throws ExtractionProblem {
 		RandomAccessFile dff = null;
 		DISOFormat dsf = new DISOFormat();
 		OutputStreamWriter cuew = null;
@@ -116,8 +146,10 @@ public class DFFExtractor {
 					cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
 					cuew.write(String.format("PERFORMER \"%s\"%n",
 							Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
-					cuew.write(String.format("TITLE \"%s\"%n",
-							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")), normalizeName((String) dsf.getMetadata("Album")), "NA")));
+					cuew.write(String.format(
+							"TITLE \"%s\"%n",
+							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")),
+									normalizeName((String) dsf.getMetadata("Album")), "NA")));
 					cuew.write(String.format("FILE \"%s\" WAVE%n", df.getName()));
 					if (tr == null) {
 						for (int t = 0; t < tracks.length; t++) {
@@ -154,11 +186,18 @@ public class DFFExtractor {
 			dsf.initBuffers(0);
 			byte samples[] = dsf.getSamples();
 			dsf.seek(seek); // TODO track
-			System.out.printf("Extracting... it may take awhile... ");
+			if (progress != null) {
+				if (trackLen > 0)
+					progress.init(trackLen);
+				else
+					progress.init(dsf.getSampleCount() * dsf.getNumChannels() / 8);
+			}
 			while (dsf.readDataBlock()) {
 				dff.write(samples, 0, dsf.bufEnd);
 				dsf.bufPos = dsf.bufEnd;
 				len += dsf.bufEnd;
+				if (progress != null)
+					progress.progress(len);
 				if (trackLen > 0 && len >= trackLen)
 					break;
 			}
