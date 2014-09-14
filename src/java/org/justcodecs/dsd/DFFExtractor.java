@@ -87,7 +87,7 @@ public class DFFExtractor {
 				});
 				st = System.currentTimeMillis() - st;
 				st /= 1000;
-				System.out.printf("Done in %d:%02d             %n", st / 60, st % 60);
+				System.out.printf("Done in %d:%02d                %n", st / 60, st % 60);
 			} catch (ExtractionProblem e) {
 				System.out.printf("Problem %s%n", e);
 			}
