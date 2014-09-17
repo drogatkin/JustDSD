@@ -94,7 +94,7 @@ public class Utils {
 		return result.toString();
 	}
 	
-	static <N> N nvl(N... ns) {
+	public static <N> N nvl(N... ns) {
 		for (N n : ns) {
 			if (n != null)
 				return n;

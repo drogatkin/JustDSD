@@ -98,13 +98,13 @@ public class DFFExtractor {
 				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only%n        p - play specified file instead of extraction");
 	}
 
-	static class ExtractionProblem extends Exception {
+	public static class ExtractionProblem extends Exception {
 		public ExtractionProblem(String reason) {
 			super(reason);
 		}
 	}
 
-	static void extractDff(File iso, File target, int track, boolean cue, boolean ove, Progress progress)
+	public static void extractDff(File iso, File target, int track, boolean cue, boolean ove, Progress progress)
 			throws ExtractionProblem {
 		RandomAccessFile dff = null;
 		DISOFormat dsf = new DISOFormat();
@@ -223,7 +223,7 @@ public class DFFExtractor {
 		}
 	}
 
-	private static String normalize(String album) {
+	public static String normalize(String album) {
 		StringBuilder result = new StringBuilder();
 		for (int i = 0; i < album.length(); i++) {
 			switch (album.charAt(i)) {
