@@ -11,7 +11,7 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 public class DFFExtractor {
 
 	public static interface Progress {
-		void init(long total);
+		void init(long total, File resultFile, File cueFile);
 
 		void progress(long current);
 	}
@@ -71,10 +71,10 @@ public class DFFExtractor {
 					long s;
 
 					@Override
-					public void init(long total) {
+					public void init(long total, File resultFile, File cueFile) {
 						t = total;
 						s = System.currentTimeMillis();
-						System.out.printf("%n");
+						System.out.printf("Writing to %s%n", resultFile);
 					}
 
 					@Override
@@ -120,6 +120,7 @@ public class DFFExtractor {
 			}
 			Scarletbook.TrackInfo[] tracks = (Scarletbook.TrackInfo[]) dsf.getMetadata("Tracks");
 			File df = new File(target, normalize(album) + ".dff");
+			File cuef = null;
 			long seek = 0;
 			long trackLen = 0;
 			if (tracks != null) {
@@ -135,7 +136,7 @@ public class DFFExtractor {
 					}
 				}
 				if (cue) { // TODO can be created without tracks
-					File cuef = new File(target, normalize(album) + ".cue");
+					cuef = new File(target, normalize(album) + ".cue");
 					if (cuef.exists() && !ove)
 						throw new ExtractionProblem("CUE " + cuef + " already exists");
 					cuew = new OutputStreamWriter(new FileOutputStream(cuef), "UTF-8");
@@ -188,9 +189,9 @@ public class DFFExtractor {
 			dsf.seek(seek); // TODO track
 			if (progress != null) {
 				if (trackLen > 0)
-					progress.init(trackLen);
+					progress.init(trackLen, df, cuef);
 				else
-					progress.init(dsf.getSampleCount() * dsf.getNumChannels() / 8);
+					progress.init(dsf.getSampleCount() * dsf.getNumChannels() / 8, df, cuef);
 			}
 			while (dsf.readDataBlock()) {
 				dff.write(samples, 0, dsf.bufEnd);
