@@ -5,7 +5,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
-import org.justcodecs.dsd.Scarletbook.TrackInfo;
 
 public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnable {
 	final static int QUEUE_SIZE = 4;
@@ -506,8 +505,12 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 
 	@Override
 	public void close() {
-		if (processor != null)
-			processor.interrupt();
+		if (processor != null) {
+			if (processor.isAlive())
+				processor.interrupt();
+			processor = null;
+		}
+			
 		super.close();
 	}
 
