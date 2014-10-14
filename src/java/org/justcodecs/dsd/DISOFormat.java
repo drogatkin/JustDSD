@@ -344,7 +344,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			dstStart = true;
 			dstLen = 0;
 			seekSample = -1;
-			//System.out.printf("Positioned to %x secotr %d block %d%n", dsdStream.getFilePointer(), atoc.track_start, currentFrame);
+			//System.out.printf("Positioned to %x sector %d block %d%n", dsdStream.getFilePointer(), atoc.track_start, currentFrame);
 		} catch (IOException e) {
 			throw new DecodeException("IO", e);
 		}
@@ -390,6 +390,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		} catch (InterruptedException e) {
 
 		} catch (Throwable t) {
+			//t.printStackTrace();
 			if (processor != null)
 				processor.interrupt();
 			if (t instanceof ThreadDeath)
@@ -434,7 +435,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						dst.FramDSTDecode(dstBuff, dsdBuff = getProcessed(), dstLen, lastFrm);
 						putForProcessing(dsdBuff);
 						dstLen = 0;
-
 						continue;
 					}
 					dstSeek = false;
@@ -460,6 +460,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			} catch (InterruptedException e) {
 				break;
 			} catch (Throwable t) {
+				//t.printStackTrace();
 				runException = t;
 				if (t instanceof ThreadDeath)
 					throw (ThreadDeath) t;
@@ -469,7 +470,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		if (readingThread != null) {
 			readingThread.interrupt();
 			synchronized (processor) {
-				decodedBuffs = null;
+				//decodedBuffs = null;
+				decodedBuffs.clear();
 			}
 		}
 		if (sleepRequested) {
@@ -506,11 +508,12 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	@Override
 	public void close() {
 		if (processor != null) {
-			if (processor.isAlive())
+			if (processor.isAlive()) {
+				sleepRequested = true;
 				processor.interrupt();
-			processor = null;
+			} else	
+				processor = null;
 		}
-			
 		super.close();
 	}
 
