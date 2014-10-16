@@ -119,6 +119,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			attrs.put("Year", new Integer(toc.disc_date_year));
 			attrs.put("Genre", toc.albumGenre[0].genre);
 			//fo = new FileOutputStream("test.dst");
+			currentFrame = 0;
+			processor = null;
 		} catch (IOException ioe) {
 			throw new DecodeException("IO", ioe);
 		}
