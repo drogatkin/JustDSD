@@ -10,6 +10,7 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 
 public interface Scarletbook {
 	static final int SACD_LSN_SIZE = 2048;
+	static final int SACD_PSN_SIZE = 2064;
 	static final int SACD_SAMPLING_FREQUENCY = 2822400;
 
 	static final int START_OF_FILE_SYSTEM_AREA = 0;
@@ -25,7 +26,6 @@ public interface Scarletbook {
 
 	static final int MAX_GENRE_COUNT = 29;
 	static final int MAX_CATEGORY_COUNT = 3;
-	static final int SACD_PSN_SIZE = 2064;
 
 	static final int SACD_FRAME_RATE = 75;
 
@@ -254,7 +254,7 @@ public interface Scarletbook {
 				String ID = new String(id);
 				stereo = "TWOCHTOC".equals(ID);
 				if (!stereo && "MULCHTOC".equals(ID) == false)
-					throw new DecodeException("Unsupported area toc:" + ID, null);
+					throw new DecodeException(String.format("Unsupported area toc: %s at 0x%x", ID,  ds.getFilePointer()-id.length), null);
 				start = tocArea;
 				ds.readFully(tb, 0, 2);
 				major = (byte) (tb[0] & 255);
@@ -516,8 +516,7 @@ public interface Scarletbook {
 				}
 				textInfo.put(name, new String(data, offset - 48, 255, encoding));
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new IllegalArgumentException("Text data can't be decoded using "+encoding, e);
 			}
 		}
 	}
@@ -562,17 +561,18 @@ public interface Scarletbook {
 					switch (type & 255) {
 					case TRACK_TYPE_TITLE:
 						cp += addText(data, "title", cp, encoding);
-						//System.out.printf("Title %s%n", get("title"));
+						//System.out.printf("Title %s at %d%n", get("title"), cp);
 						break;
 					case TRACK_TYPE_PERFORMER:
 						cp += addText(data, "performer", cp, encoding);
 						break;
 					default:
+						//System.out.printf("Unknown type %d at %d %n", type, i);
 						while (cp < data.length && data[cp] != 0)
 							cp++;
 					}
-				}
-
+				} //else 
+					//System.out.printf("Skipping entry %d%n", i);
 				while (cp < data.length && data[cp] == 0)
 					cp++;
 			}
@@ -604,10 +604,17 @@ public interface Scarletbook {
 	static class TrackText {
 		byte[] id = new byte[8];
 		TrackInfo[] infos;
-		static byte data[] = new byte[4000];
+		int startOffset;
+		byte data[] = new byte[4096];
+		
 
-		public TrackText(byte trackCount) {
+		public TrackText(byte trackCount, int offs) {
 			infos = new TrackInfo[trackCount];
+			startOffset = offs;
+		}
+		
+		public TrackText(byte trackCount) {
+			this(trackCount, 0);
 		}
 
 		void read(DSDStream ds, String encoding) throws DecodeException {
@@ -616,7 +623,7 @@ public interface Scarletbook {
 				String ID = new String(id);
 				if ("SACDTTxt".equals(ID) == false) {
 					ds.seek(ds.getFilePointer() - 8);
-					throw new DecodeException("Track text not found " + ID, null);
+					throw new DecodeException("Expected SACDTTxt, but found  " + ID + " for Track text", null);
 				}
 				int off = 0;
 				//System.out.printf("==Entries:%d%n", infos.length);
@@ -631,8 +638,8 @@ public interface Scarletbook {
 					}
 				}
 				//off -= id.length+infos.length*2;
-				//System.out.printf("Entries:%d, red %d%n", infos.length, off);
-				ds.seek(ds.getFilePointer() + off - (id.length + infos.length * 2));
+				//System.out.printf("Entries:%d, read %d at 0x%x%n", infos.length, off, ds.getFilePointer() + off - (id.length + infos.length * 2) + startOffset);
+				ds.seek(ds.getFilePointer() + off - (id.length + infos.length * 2)+startOffset);
 				ds.readFully(data, 0, data.length);
 				for (int i = 0; i < infos.length; i++) {
 					if (infos[i] != null) {

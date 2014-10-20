@@ -10,6 +10,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	final static int QUEUE_SIZE = 4;
 	byte buff[];
 	int sectorSize;
+	int sectorStartOffset;
 	TOC toc;
 	AreaTOC atoc;
 	int frmHdrSize;
@@ -50,15 +51,17 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				ds.seek(START_OF_MASTER_TOC * SACD_PSN_SIZE + 12);
 				toc.read(ds);
 				sectorSize = SACD_PSN_SIZE;
+				sectorStartOffset = 12;
 				//System.out.printf("!!%n");
 			}
 			//System.out.printf("[SACD] image %s at sector %d start area %x%n", toc, sectorSize, toc.area1Toc1Start * sectorSize);
-			ds.seek(toc.area1Toc1Start * sectorSize);
+			
+			ds.seek(toc.area1Toc1Start * sectorSize + sectorStartOffset);
 			atoc = new AreaTOC();
 			if (toc.area1Toc1Start > 0)
 				atoc.read(ds, toc.area1Toc1Start);
 			if (!atoc.stereo) {
-				ds.seek(toc.area_2_toc_1_start * sectorSize + (sectorSize == SACD_PSN_SIZE?12:0));
+				ds.seek(toc.area_2_toc_1_start * sectorSize + sectorStartOffset);
 				//System.out.printf("reading %x%n", toc.area_2_toc_1_start * sectorSize);
 				atoc.read(ds, toc.area_2_toc_1_start);
 				if (!atoc.stereo)
@@ -79,29 +82,30 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				frmHdrSize = 32;
 			//throw new DecodeException("DSS 3 in 16 isn't supported yet", null);
 			//System.out.printf("Area-> %s%n", atoc);
-			ds.seek((START_OF_MASTER_TOC + 1) * (SACD_LSN_SIZE));
+			ds.seek((START_OF_MASTER_TOC + 1) * (sectorSize) + sectorStartOffset);
+			//System.out.printf("reading cdtext at0x%x size %d%n", (START_OF_MASTER_TOC + 1) * (sectorSize) + sectorStartOffset, atoc.size);
 			CDText ctx = new CDText();
 			ctx.read(ds, atoc.locales[0].encoding);
-			TrackText ttx = new TrackText(atoc.track_count);
+			TrackText ttx = new TrackText(atoc.track_count, sectorStartOffset==0?0:32);
 			TrackTime tm = new TrackTime();
 			boolean ttxf = false;
 			for (int i = 1; i < atoc.size; i++) {
+				//System.out.printf("checking at 0x%x%n", (atoc.start + i) * sectorSize + sectorStartOffset);
 				if (!ttxf) {
-					ds.seek((atoc.start + i) * sectorSize);
+					ds.seek((atoc.start + i) * sectorSize + sectorStartOffset);
 					try {
 						ttx.read(ds, atoc.locales[0].encoding);
 						ttxf = true;
-						//System.out.printf("tt-> %s%n", ttx);
 						continue;
 					} catch (DecodeException de) {
-
+						//System.out.printf("header %s%n", de);
 					}
 				}
-				ds.seek((atoc.start + i) * sectorSize);
+				ds.seek((atoc.start + i) * sectorSize + sectorStartOffset);
 				try {
 					tm.read(ds);
 				} catch (DecodeException de) {
-
+					//System.out.printf("header time %s%n", de);
 				}
 			}
 			if (!ttxf)
@@ -158,6 +162,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					if (currentFrame > (atoc.track_end - atoc.track_start))
 						return false;
 					dstStart = false;
+					if (sectorStartOffset > 0)
+						dsdStream.readFully(header, 0, sectorStartOffset);
 					//System.out.printf("Reading header at %x %n", dsdStream.getFilePointer());
 					frmHeader = new FrmHeader();
 					frmHeader.read(dsdStream);
@@ -167,7 +173,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						hdrIdx = 0;
 					} else {
 						dstStart = true;
-						dsdStream.readFully(dstPakBuf, 0, SACD_LSN_SIZE - frmHeader.getSize());
+						dsdStream.readFully(dstPakBuf, 0, sectorSize - frmHeader.getSize()-sectorStartOffset);
 						//System.out.printf("moved to %d%n", dsdStream.getFilePointer());
 						continue;
 					}
@@ -216,7 +222,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					int skip = frmHeader.getPackLen(0);
 					for (int i = 1; i < frmHeader.packet_info_count; i++)
 						skip += frmHeader.getPackLen(i);
-					skip = SACD_LSN_SIZE - frmHeader.getSize() - skip;
+					skip = sectorSize - frmHeader.getSize() - skip - sectorStartOffset;
 					if (skip > 0)
 						dsdStream.readFully(dstPakBuf, 0, skip);
 					else if (skip < 0)
@@ -267,17 +273,18 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		if (frmHdrSize == 0 && dst == null)
 			throw new IllegalStateException("Area TOC wasn't processed yet");
 		block = SACD_LSN_SIZE - frmHdrSize;
-		if (dst == null)
+		if (dst == null) {
 			buff = new byte[block + (overrun * getNumChannels())];
-		else {
+			header = new byte[frmHdrSize];
+		} else {
 			dstBuff = new byte[MAX_DST_SIZE]; //MAX_DST_SIZE
 			buff = new byte[(dst.FrameHdr.MaxFrameLen + overrun) * dst.FrameHdr.NrOfChannels];
 			dsdBuf = new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]; //??
 			frmHeader = new FrmHeader();
 			for (int i = 0; i < QUEUE_SIZE; i++)
 				usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]);
+			header = new byte[12];
 		}
-		header = new byte[frmHdrSize];
 	}
 
 	@Override
@@ -326,6 +333,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						atoc.track_end - atoc.track_start);*/
 				if (isDST()) {
 					do {
+						if (sectorStartOffset > 0)
+							dsdStream.readFully(header, 0, sectorStartOffset);
 						frmHeader.read(dsdStream);
 						if (frmHeader.frame_info_count == 0) {
 							currentFrame++;
@@ -420,13 +429,15 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					if (currentFrame > (atoc.track_end - atoc.track_start))
 						break;
 					dstStart = false;
+					if (sectorStartOffset > 0)
+						dsdStream.readFully(header, 0, sectorStartOffset);
 					frmHeader.read(dsdStream);
 					currentFrame++;
 					if (frmHeader.packet_info_count > 0) {
 						hdrIdx = 0;
 					} else {
 						dstStart = true;
-						dsdStream.readFully(dstPakBuf, 0, SACD_LSN_SIZE - frmHeader.getSize());
+						dsdStream.readFully(dstPakBuf, 0, sectorSize - frmHeader.getSize() - sectorStartOffset);
 						continue;
 					}
 				}
@@ -453,7 +464,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					int skip = frmHeader.getPackLen(0);
 					for (int i = 1; i < frmHeader.packet_info_count; i++)
 						skip += frmHeader.getPackLen(i);
-					skip = SACD_LSN_SIZE - frmHeader.getSize() - skip;
+					skip = sectorSize - frmHeader.getSize() - skip - sectorStartOffset;
 					if (skip > 0)
 						dsdStream.readFully(dstPakBuf, 0, skip);
 					else if (skip < 0)
