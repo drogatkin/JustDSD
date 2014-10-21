@@ -161,8 +161,7 @@ public class DFFExtractor {
 								cuew.write(String.format("    PERFORMER \"%s\"%n",
 										normalizeName(tracks[t].get("performer"))));
 							if (dsf.textDuration > 0) {
-								double adj = ((double) dsf.getSampleCount()) / dsf.textDuration / dsf.getSampleRate();
-								int start = (int) Math.round(adj * tracks[t].start);
+								int start = (int) Math.round(dsf.getTimeAdjustment() * tracks[t].start);
 								cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", start / 60, start % 60, 0));
 							} else
 								cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", tracks[t].start / 60,
