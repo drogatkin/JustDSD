@@ -4,6 +4,11 @@ import java.util.Random;
 
 public class Decoder implements Filters {
 	public static class PCMFormat {
+		@Override
+		public String toString() {
+			return "PCMFormat [bitsPerSample=" + bitsPerSample + ", sampleRate=" + sampleRate + ", channels="
+					+ channels + ", unsigned=" + unsigned + "]";
+		}
 		public int bitsPerSample;
 		public int sampleRate;
 		public int channels;
@@ -198,11 +203,11 @@ public class Decoder implements Filters {
 						int byt = buff[c][dsdf.bufPos + t] & 0xFF;
 						sum += lookupTable[t][byt];
 					}
-				sum = sum * scale;
+				sum *= scale;
 				// dither before rounding/truncating
 				if (tpdfDitherPeakAmplitude > 0) {
 					// TPDF dither
-					sum = sum + ((rnd.nextDouble() - rnd.nextDouble())) * tpdfDitherPeakAmplitude;
+					sum += ((rnd.nextDouble() - rnd.nextDouble())) * tpdfDitherPeakAmplitude;
 				}
 				if (clip) {
 					if (sum > clipAmplitude)

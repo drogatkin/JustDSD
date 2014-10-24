@@ -12,6 +12,8 @@ public interface DSDStream {
 	
 	public int readInt(boolean lsb) throws IOException;
 	
+	public long readIntUnsigned(boolean lsb) throws IOException;
+	
 	public short readShort(boolean lsb) throws IOException;
 
 	long length() throws IOException;
