@@ -233,6 +233,9 @@ public class DFFExtractor {
 			case '?':
 			case '*':
 				continue;
+			case ':':
+				result.append('-');
+				break;
 			default:
 				result.append(album.charAt(i));
 			}
