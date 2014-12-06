@@ -72,16 +72,17 @@ public class Player {
 				pcmf.channels = 2;
 				AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
 				dl = AudioSystem.getSourceDataLine(af);
+				pcmf.bitsPerSample = 24;
 				decoder.setPCMFormat(pcmf);
 				dl.open();
 				dl.start();
 				int[][] samples = new int[pcmf.channels][2048];
 				int channels = (pcmf.channels > 2 ? 2 : pcmf.channels);
-				int bytesChannelSample = pcmf.bitsPerSample / 8;
+				int bytesChannelSample = 2; //pcmf.bitsPerSample / 8;
 				int bytesSample = channels * bytesChannelSample;
 				byte[] playBuffer = new byte[bytesSample * 2048];
 				decoder.seek(0);
-				boolean testSeek = false;
+				int testSeek = 1687;
 				do {
 					int nsampl = decoder.decodePCM(samples);
 					if (nsampl <= 0)
@@ -90,6 +91,7 @@ public class Player {
 					for (int s = 0; s < nsampl; s++) {
 						for (int c = 0; c < channels; c++) {
 							//System.out.printf("%x", samples[c][s]);
+							samples[c][s] >>=8;
 							for (int b = 0; b < bytesChannelSample; b++)
 								playBuffer[bp++] = (byte) ((samples[c][s] >> (b * 8)) & 255);
 						}
@@ -98,9 +100,9 @@ public class Player {
 					//System.out.printf("%x", playBuffer[k]);
 					dl.write(playBuffer, 0, bp);
 					sampleCount += nsampl;
-					if (testSeek && sampleCount > pcmf.sampleRate * 10) {
-						decoder.seek((long) decoder.getSampleRate() * (2963));
-						testSeek = false;
+					if (testSeek > 0 && sampleCount > pcmf.sampleRate * 10) {
+						decoder.seek((long) decoder.getSampleRate() * (testSeek));
+						testSeek = 0;
 					}
 				} while (true);
 				dl.stop();
@@ -117,7 +119,8 @@ public class Player {
 
 	protected SourceDataLine getDSDLine(DSDFormat dsd) {
 		try {
-			return AudioSystem.getSourceDataLine(new AudioFormat(dsd.getSampleRate(), 1, dsd.getNumChannels(), false,
+			return AudioSystem.getSourceDataLine(new AudioFormat(new AudioFormat.Encoding("DSD_UNSIGNED"),
+					dsd.getSampleRate(), 1, dsd.getNumChannels(), 4, dsd.getSampleRate()/32,
 					true));
 		} catch (IllegalArgumentException e) {
 			System.out.printf("No DSD %s%n", e);

@@ -361,6 +361,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		}
 	}
 	
+	@Override
 	public double getTimeAdjustment() {
 		if (textDuration <= 0)
 			return 1.0;

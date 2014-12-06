@@ -194,8 +194,8 @@ public class Decoder implements Filters {
 			for (int c = 0; c < nsc; c++) {
 				double sum = 0.0;
 				if (ils)
-					for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
-						int byt = buffi[dsdf.bufPos + t * nsc + c] & 255;
+					for (int t = 0, b = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++,b+=nsc) {
+						int byt = buffi[dsdf.bufPos + b + c] & 255;
 						sum += lookupTable[t][byt];
 					}
 				else

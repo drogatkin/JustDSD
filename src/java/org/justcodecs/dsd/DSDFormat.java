@@ -46,6 +46,10 @@ public abstract class DSDFormat<B> {
 	abstract boolean isMSB();
 	abstract B getSamples();
 	abstract void seek(long sampleNum) throws DecodeException;
+	
+	public double getTimeAdjustment() {
+		return 1.0;
+	}
 
 	public void close() {
 		try {
