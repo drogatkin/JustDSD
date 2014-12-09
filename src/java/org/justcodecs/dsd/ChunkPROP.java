@@ -42,7 +42,7 @@ public class ChunkPROP extends BaseChunk {
 					try {
 						dst.skip(ds);
 					} catch (DecodeException e) {
-						break;
+						//break;
 					}
 				} else if (c instanceof ChunkID3) {
 					

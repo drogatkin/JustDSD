@@ -33,6 +33,9 @@ public class DFFFormat extends DSDFormat<byte[]> {
 
 	@Override
 	boolean readDataBlock() throws DecodeException {
+		if (isDST()) {
+			return decodeDSTDataBlock();
+		}
 		try {
 			if (filePosition >= frm.props.dsd.dataEnd)
 				return false;
@@ -101,18 +104,35 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	boolean isDST() {
 		return frm.props.dst != null;
 	}
-	
+
 	@Override
 	void seek(long sampleNum) throws DecodeException {
-		if (isDST())
-			throw new DecodeException("DST support development in progress", null);
+		if (isDST()) {
+			seekDST(sampleNum);
+			return;
+		}
 		//if (sampleNum < getSampleCount())
 		try {
 			//System.out.printf("Start play %d for sample %d, frm %s%n", dsdStream.getFilePointer(), sampleNum, frm.props.dsd);
 			filePosition = frm.props.dsd.start + (sampleNum / 8) * getNumChannels();
-			dsdStream.seek(filePosition);			
+			dsdStream.seek(filePosition);
 			bufPos = -1;
 			bufEnd = 0;
+		} catch (IOException e) {
+			// TODO invalidate filePosition
+			throw new DecodeException("", e);
+		}
+	}
+
+	boolean decodeDSTDataBlock() throws DecodeException {
+		return false;
+	}
+
+	void seekDST(long sampleNum) throws DecodeException {
+		try {
+			if (sampleNum == 0) {
+				dsdStream.seek(frm.props.dst.info.start);
+			}
 		} catch (IOException e) {
 			// TODO invalidate filePosition
 			throw new DecodeException("", e);
