@@ -38,9 +38,13 @@ public class ChunkCOMT extends BaseChunk {
 			cmtType = ds.readShort(true);
 			cmtRef = ds.readShort(true);
 			int l = ds.readInt(true);
+			// TODO check length
+			//System.out.printf("CMT chu size %d com len %d%n", 0, l);
 			byte[] tb = new byte[l];
 			ds.readFully(tb, 0, l);
 			commentText = new String(tb);
+			if ((l & 1) == 1)
+				ds.readFully(IDBuf, 0, 1); // read padding
 		}
 
 		@Override

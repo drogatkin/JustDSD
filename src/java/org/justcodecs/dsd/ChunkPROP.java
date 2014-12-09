@@ -9,6 +9,7 @@ public class ChunkPROP extends BaseChunk {
 	int channels;
 	String comp;
 	ChunkDSD dsd;
+	ChunkDST dst;
 	long bound;
 
 	@Override
@@ -33,6 +34,13 @@ public class ChunkPROP extends BaseChunk {
 					dsd = (ChunkDSD) c;
 					try {
 						dsd.skip(ds);
+					} catch (DecodeException e) {
+						break;
+					}
+				} else if (c instanceof ChunkDST) {
+					dst = (ChunkDST) c;
+					try {
+						dst.skip(ds);
 					} catch (DecodeException e) {
 						break;
 					}

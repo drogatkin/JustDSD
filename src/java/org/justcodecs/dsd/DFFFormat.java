@@ -98,12 +98,19 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	}
 
 	@Override
+	boolean isDST() {
+		return frm.props.dst != null;
+	}
+	
+	@Override
 	void seek(long sampleNum) throws DecodeException {
+		if (isDST())
+			throw new DecodeException("DST support development in progress", null);
 		//if (sampleNum < getSampleCount())
 		try {
+			//System.out.printf("Start play %d for sample %d, frm %s%n", dsdStream.getFilePointer(), sampleNum, frm.props.dsd);
 			filePosition = frm.props.dsd.start + (sampleNum / 8) * getNumChannels();
-			dsdStream.seek(filePosition);
-			//System.out.printf("Start play %d for sample %d%n", dsdStream.getFilePointer(), sampleNum);
+			dsdStream.seek(filePosition);			
 			bufPos = -1;
 			bufEnd = 0;
 		} catch (IOException e) {
