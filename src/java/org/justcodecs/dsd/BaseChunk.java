@@ -48,7 +48,11 @@ public class BaseChunk {
 		try {
 			ds.readFully(IDBuf, 0, 4);
 			long size = ds.readLong(true);
-			ds.seek(ds.getFilePointer() +  size);
+			long start = ds.getFilePointer();
+			//System.out.printf("Current %x,  size %d%n", start, size);
+			if ((size & 1)==1)
+				size++;
+			ds.seek(start +  size);
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

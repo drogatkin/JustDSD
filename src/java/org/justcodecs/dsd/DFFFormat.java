@@ -15,7 +15,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	// DST specific 
 	int dstFrmNo;
 	DSTDecoder dst;
-	byte dsdBuf[];
+	byte[] dsdBuf;
 
 	@Override
 	public void init(DSDStream ds) throws DecodeException {
@@ -95,7 +95,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		if (!isDST())
 			return (frm.props.dsd.dataEnd - frm.props.dsd.start) * (8 / getNumChannels());
 		else
-			return frm.props.dst.info.numFrames /*/ frm.props.dst.info.rate*/ * getSampleRate();
+			return frm.props.dst.info.numFrames / frm.props.dst.info.rate * getSampleRate();
 	}
 
 	@Override
@@ -160,9 +160,21 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		}
 
 		try {
-			dst.FramDSTDecode(c.data, buff, (int) c.size, dstFrmNo);
-			bufPos = 0;
-			bufEnd = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
+			if (bufPos < 0)
+				bufPos = 0;
+			int delta = bufEnd - bufPos;
+			if (delta > 0)
+				System.arraycopy(buff, bufPos, buff, 0, delta);
+			int dlen = (int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
+			if (delta + dlen >= buff.length) {
+				bufPos = 0;
+				bufEnd = delta;
+			} else {
+				dst.FramDSTDecode(c.data, dsdBuf, (int) c.size, dstFrmNo);
+				System.arraycopy(dsdBuf, 0, buff, delta, dlen);
+				bufPos = 0;
+				bufEnd = delta + dlen;//(int) (dst.FrameHdr.NrOfBitsPerCh * dst.FrameHdr.NrOfChannels / 8);
+			}
 		} catch (DSTException e) {
 			throw new DecodeException("", e);
 		}
@@ -173,16 +185,18 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		try {
 			if (sampleNum == 0) {
 				dsdStream.seek(frm.props.dst.info.start + frm.props.dst.info.size);
-				System.out.printf("Start play 0x%x for sample %d, frm %s total %d%n", dsdStream.getFilePointer(),
-						dstFrmNo, frm.props.dst, frm.props.dst.info.numFrames);
+				//System.out.printf("Start play 0x%x for sample %d, frm %s total %d%n", dsdStream.getFilePointer(),
+				//	dstFrmNo, frm.props.dst, frm.props.dst.info.numFrames);
 			} else {
 				int seekChunk = (int) (sampleNum * frm.props.dst.info.numFrames / getSampleCount());
 				dsdStream.seek(frm.props.dst.info.start + frm.props.dst.info.size);
 				// position in file, read buff, find signature
 				// or use ChunkDSTI when avail
-				System.out.printf("Start play 0x%x for sample %d, frm %d total %d%n", dsdStream.getFilePointer(),
-						dstFrmNo, seekChunk, frm.props.dst.info.numFrames);
+				//System.out.printf("Start play 0x%x for sample %d, frm %d total %d%n", dsdStream.getFilePointer(),
+				//	dstFrmNo, seekChunk, frm.props.dst.info.numFrames);
+				// TODO crc chunk presence and adjust jump
 				for (int i = 0; i < seekChunk; i++)
+					//BaseChunk.create(dsdStream, (BaseChunk)null);
 					BaseChunk.jump(dsdStream);
 				dstFrmNo = seekChunk;
 			}
