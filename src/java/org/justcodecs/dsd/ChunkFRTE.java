@@ -15,7 +15,7 @@ public class ChunkFRTE extends BaseChunk {
 		try {
 			numFrames = ds.readInt(true);
 			rate = ds.readShort(true);
-			skip(ds);
+			//skip(ds);
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}
