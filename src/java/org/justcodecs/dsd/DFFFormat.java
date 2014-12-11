@@ -43,9 +43,6 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		}*/
 	}
 
-	FileOutputStream fo;
-	int cnt;
-
 	@Override
 	boolean readDataBlock() throws DecodeException {
 		if (isDST()) {
@@ -65,15 +62,6 @@ public class DFFFormat extends DSDFormat<byte[]> {
 				toRead = (int) (frm.props.dsd.dataEnd - filePosition);
 			dsdStream.readFully(buff, delta, toRead);
 			filePosition += toRead;
-
-			if (fo != null) {
-				fo.write(buff, delta, toRead);
-				cnt += toRead;
-				if (cnt > 200 * 1024) {
-					fo.close();
-					fo = null;
-				}
-			}
 			//System.out.printf("%s%n", Utils.toHexString(0, 100, buff));
 			//if (true)
 			//throw new DecodeException("test", null);
@@ -195,6 +183,16 @@ public class DFFFormat extends DSDFormat<byte[]> {
 				//System.out.printf("Start play 0x%x for sample %d, frm %d total %d%n", dsdStream.getFilePointer(),
 				//	dstFrmNo, seekChunk, frm.props.dst.info.numFrames);
 				// TODO crc chunk presence and adjust jump
+				BaseChunk c = BaseChunk.create(dsdStream, (BaseChunk)null);
+				if (c instanceof ChunkDSTC)
+					seekChunk *= 2;
+				else {
+					c = BaseChunk.create(dsdStream, (BaseChunk)null);
+					if (c instanceof ChunkDSTC)
+						seekChunk = 2*(seekChunk - 1);
+					else
+						seekChunk -= 2;
+				}
 				for (int i = 0; i < seekChunk; i++)
 					//BaseChunk.create(dsdStream, (BaseChunk)null);
 					BaseChunk.jump(dsdStream);
