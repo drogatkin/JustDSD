@@ -198,11 +198,13 @@ public class Decoder implements Filters {
 						int byt = buffi[dsdf.bufPos + b + c] & 255;
 						sum += lookupTable[t][byt];
 					}
-				else
+				else {
+					byte[] tbuf = buff[c];
 					for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
-						int byt = buff[c][dsdf.bufPos + t] & 0xFF;
+						int byt = tbuf[dsdf.bufPos + t] & 0xFF;
 						sum += lookupTable[t][byt];
 					}
+				}
 				sum *= scale;
 				// dither before rounding/truncating
 				if (tpdfDitherPeakAmplitude > 0) {
