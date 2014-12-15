@@ -9,6 +9,7 @@ public class Decoder implements Filters {
 			return "PCMFormat [bitsPerSample=" + bitsPerSample + ", sampleRate=" + sampleRate + ", channels="
 					+ channels + ", unsigned=" + unsigned + "]";
 		}
+
 		public int bitsPerSample;
 		public int sampleRate;
 		public int channels;
@@ -189,51 +190,79 @@ public class Decoder implements Filters {
 			if (dsdf.readDataBlock() == false)
 				return -1;
 		}
-		for (int i = 0; i < slen; i++) {
-			// filter each chan in turn
-			for (int c = 0; c < nsc; c++) {
-				double sum = 0.0;
-				if (ils)
-					for (int t = 0, b = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++,b+=nsc) {
+		if (ils) {
+			for (int i = 0; i < slen; i++) {
+				// filter each chan in turn
+				for (int c = 0; c < nsc; c++) {
+					double sum = 0.0;
+					for (int t = 0, b = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++, b += nsc) {
 						int byt = buffi[dsdf.bufPos + b + c] & 255;
 						sum += lookupTable[t][byt];
 					}
-				else {
-					byte[] tbuf = buff[c];
+
+					sum *= scale;
+					// dither before rounding/truncating
+					if (tpdfDitherPeakAmplitude > 0) {
+						// TPDF dither
+						sum += ((rnd.nextDouble() - rnd.nextDouble())) * tpdfDitherPeakAmplitude;
+					}
+					if (clip) {
+						if (sum > clipAmplitude)
+							sum = clipAmplitude;
+						else if (sum < -clipAmplitude)
+							sum = -clipAmplitude;
+					}
+					if (roundToInt)
+						if (samplesShort == null)
+							samplesInt[c][i] = (int) Math.round(sum);
+						else
+							samplesShort[c][i] = (short) Math.round(sum);
+					else
+						samplesFloat[c][i] = (sum);
+				}
+				// step the buffer
+				dsdf.bufPos += nStep * nsc;
+				if (dsdf.bufPos + lookupTable.length * nsc > dsdf.bufEnd) {
+					if (dsdf.readDataBlock() == false)
+						return i; // was zeroing start
+				}
+			}
+		} else {
+			for (int i = 0; i < slen; i++) {
+				// filter each chan in turn
+				for (int c = 0; c < nsc; c++) {
+					double sum = 0.0;
+					buffi = buff[c];
 					for (int t = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++) {
-						int byt = tbuf[dsdf.bufPos + t] & 0xFF;
+						int byt = buffi[dsdf.bufPos + t] & 0xFF;
 						sum += lookupTable[t][byt];
 					}
-				}
-				sum *= scale;
-				// dither before rounding/truncating
-				if (tpdfDitherPeakAmplitude > 0) {
-					// TPDF dither
-					sum += ((rnd.nextDouble() - rnd.nextDouble())) * tpdfDitherPeakAmplitude;
-				}
-				if (clip) {
-					if (sum > clipAmplitude)
-						sum = clipAmplitude;
-					else if (sum < -clipAmplitude)
-						sum = -clipAmplitude;
-				}
-				if (roundToInt)
-					if (samplesShort == null)
-						samplesInt[c][i] = (int) Math.round(sum);
+					sum *= scale;
+					// dither before rounding/truncating
+					if (tpdfDitherPeakAmplitude > 0) {
+						// TPDF dither
+						sum += ((rnd.nextDouble() - rnd.nextDouble())) * tpdfDitherPeakAmplitude;
+					}
+					if (clip) {
+						if (sum > clipAmplitude)
+							sum = clipAmplitude;
+						else if (sum < -clipAmplitude)
+							sum = -clipAmplitude;
+					}
+					if (roundToInt)
+						if (samplesShort == null)
+							samplesInt[c][i] = (int) Math.round(sum);
+						else
+							samplesShort[c][i] = (short) Math.round(sum);
 					else
-						samplesShort[c][i] = (short) Math.round(sum);
-				else
-					samplesFloat[c][i] = (sum);
-			}
-			// step the buffer
-			//System.out.printf("Skipping %d%n", nStep);
-			//currentSample++;
-			//if (currentSample >= fmt.sampleCount)
-			//return i;
-			dsdf.bufPos += nStep * (ils ? nsc : 1);
-			if (dsdf.bufPos + lookupTable.length * (ils ? nsc : 1) > dsdf.bufEnd) {
-				if (dsdf.readDataBlock() == false)
-					return i; // was zeroing start
+						samplesFloat[c][i] = (sum);
+				}
+				// step the buffer
+				dsdf.bufPos += nStep;
+				if (dsdf.bufPos + lookupTable.length > dsdf.bufEnd) {
+					if (dsdf.readDataBlock() == false)
+						return i; // was zeroing start
+				}
 			}
 		}
 		return slen;
