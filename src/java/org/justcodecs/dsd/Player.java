@@ -3,6 +3,7 @@ package org.justcodecs.dsd;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URL;
+import java.net.URLDecoder;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -49,7 +50,7 @@ public class Player {
 				dsd = new DFFFormat();
 			if (f.toUpperCase().startsWith("FILE:/")) {
 				try {
-					f = new URL(f).getFile();
+					f = new URL(URLDecoder.decode(f, "UTF-8")).getFile();
 				} catch (Exception e) {
 					// ignore
 				}	
