@@ -2,6 +2,7 @@ package org.justcodecs.dsd;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.net.URL;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -46,6 +47,13 @@ public class Player {
 				dsd = new DISOFormat();
 			} else
 				dsd = new DFFFormat();
+			if (f.toUpperCase().startsWith("FILE:/")) {
+				try {
+					f = new URL(f).getFile();
+				} catch (Exception e) {
+					// ignore
+				}	
+			}
 			dsd.init(new Utils.RandomDSDStream(new File(f)));
 			decoder.init(dsd);
 			System.out.printf("Playing ... %s%n", dsd);
