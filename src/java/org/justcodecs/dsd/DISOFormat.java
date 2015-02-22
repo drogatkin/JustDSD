@@ -14,7 +14,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	TOC toc;
 	AreaTOC atoc;
 	int frmHdrSize;
-	int block = SACD_LSN_SIZE - frmHdrSize; // sectorSize 
+	int block, tail;
 	byte[] header;
 	int currentFrame;
 	int textDuration;
@@ -55,7 +55,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				//System.out.printf("!!%n");
 			}
 			//System.out.printf("[SACD] image %s at sector %d start area %x%n", toc, sectorSize, toc.area1Toc1Start * sectorSize);
-			
+
 			ds.seek(toc.area1Toc1Start * sectorSize + sectorStartOffset);
 			atoc = new AreaTOC();
 			if (toc.area1Toc1Start > 0)
@@ -77,16 +77,16 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				//throw new DecodeException("DST compression isn't supported yet", null);
 			}
 			if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_16)
-				frmHdrSize = 284; // +sectorStartOffset
+				frmHdrSize = 284;
 			else if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_14)
-				frmHdrSize = 32+sectorStartOffset;
+				frmHdrSize = 32;
 			//throw new DecodeException("DSS 3 in 16 isn't supported yet", null);
 			//System.out.printf("Area-> %s%n", atoc);
 			ds.seek((START_OF_MASTER_TOC + 1) * (sectorSize) + sectorStartOffset);
 			//System.out.printf("reading cdtext at0x%x size %d%n", (START_OF_MASTER_TOC + 1) * (sectorSize) + sectorStartOffset, atoc.size);
 			CDText ctx = new CDText();
 			ctx.read(ds, atoc.locales[0].encoding);
-			TrackText ttx = new TrackText(atoc.track_count, sectorStartOffset==0?0:32);
+			TrackText ttx = new TrackText(atoc.track_count, sectorStartOffset == 0 ? 0 : 32);
 			TrackTime tm = new TrackTime();
 			boolean ttxf = false;
 			for (int i = 1; i < atoc.size; i++) {
@@ -129,27 +129,37 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			throw new DecodeException("IO", ioe);
 		}
 	}
-
+	
+	//int it;
 	@Override
 	boolean readDataBlock() throws DecodeException {
 		if (dst != null)
 			return readDSTDataBlockAsync();
 		if (currentFrame > (atoc.track_end - atoc.track_start))
 			return false;
+		//if (it > 5)
+			//return false;
+		if (bufPos < 0)
+			bufPos = 0;
+		int delta = bufEnd - bufPos;
+		if (delta > 0)
+			System.arraycopy(buff, bufPos, buff, 0, delta);
 		try {
-			if (bufPos < 0)
-				bufPos = 0;
-			int delta = bufEnd - bufPos;
-			if (delta > 0)
-				System.arraycopy(buff, bufPos, buff, 0, delta);
+			long pp, pp1;
+			//pp = dsdStream.getFilePointer();
 			dsdStream.readFully(header, 0, header.length);
+			//pp1 = dsdStream.getFilePointer();
 			dsdStream.readFully(buff, delta, block);
+			//if (tail > 0)
+				//dsdStream.readFully(header, 0, tail);
+			//System.out.printf("Start 0x%x data 0x%x  dirst 0x%x, last 0x%x%n", pp, pp1, buff[delta], buff[delta+block-1]);
 			currentFrame++;
 			bufPos = 0;
-			bufEnd = block + delta;
+			bufEnd = block + delta - tail;
 		} catch (IOException e) {
 			throw new DecodeException("IO exception at reading samples", e);
 		}
+		//it++;
 		return true;
 	}
 
@@ -165,7 +175,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					if (sectorStartOffset > 0)
 						dsdStream.readFully(header, 0, sectorStartOffset);
 					//System.out.printf("Reading header at %x %n", dsdStream.getFilePointer());
-					frmHeader = new FrmHeader();
+					//frmHeader = new FrmHeader();
 					frmHeader.read(dsdStream);
 					currentFrame++;
 					//System.out.printf("header: %s%n", frmHeader);
@@ -173,7 +183,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						hdrIdx = 0;
 					} else {
 						dstStart = true;
-						dsdStream.readFully(dstPakBuf, 0, sectorSize - frmHeader.getSize()-sectorStartOffset);
+						dsdStream.readFully(dstPakBuf, 0, sectorSize - frmHeader.getSize() - sectorStartOffset);
 						//System.out.printf("moved to %d%n", dsdStream.getFilePointer());
 						continue;
 					}
@@ -272,10 +282,14 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	void initBuffers(int overrun) {
 		if (frmHdrSize == 0 && dst == null)
 			throw new IllegalStateException("Area TOC wasn't processed yet");
-		block = sectorSize - frmHdrSize;
+		block = SACD_LSN_SIZE - frmHdrSize;
+		tail = sectorSize - block - frmHdrSize - sectorStartOffset;
+		if (tail > 0)
+			block += tail;
+		//System.out.printf("sec size: %d, hdr: %d, block: %d  ta: %d%n", sectorSize, frmHdrSize, block, tail);
 		if (dst == null) {
 			buff = new byte[block + (overrun * getNumChannels())];
-			header = new byte[frmHdrSize];
+			header = new byte[frmHdrSize+sectorStartOffset];
 		} else {
 			dstBuff = new byte[MAX_DST_SIZE]; //MAX_DST_SIZE
 			buff = new byte[(dst.FrameHdr.MaxFrameLen + overrun) * dst.FrameHdr.NrOfChannels];
@@ -315,6 +329,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		try {
 			if (sampleNum == 0) {
 				dsdStream.seek(atoc.track_start * sectorSize);
+				//System.out.printf("Seek %d %x%n", atoc.track_start * sectorSize, atoc.track_start * sectorSize);
 				//new Exception().printStackTrace();
 			} else if (sampleNum > 0 && sampleNum < getSampleCount()) {
 				//System.out.printf("actual samples %d (%ds) text samples %d (%ds) search %d(%ds)%n",getSampleCount(), getSampleCount()/getSampleRate(),
@@ -360,7 +375,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			throw new DecodeException("IO", e);
 		}
 	}
-	
+
 	@Override
 	public double getTimeAdjustment() {
 		if (textDuration <= 0)
@@ -525,7 +540,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			if (processor.isAlive()) {
 				sleepRequested = true;
 				processor.interrupt();
-			} else	
+			} else
 				processor = null;
 		}
 		super.close();
