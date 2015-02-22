@@ -77,9 +77,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				//throw new DecodeException("DST compression isn't supported yet", null);
 			}
 			if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_16)
-				frmHdrSize = 284;
+				frmHdrSize = 284; // +sectorStartOffset
 			else if (atoc.frame_format == FRAME_FORMAT_DSD_3_IN_14)
-				frmHdrSize = 32;
+				frmHdrSize = 32+sectorStartOffset;
 			//throw new DecodeException("DSS 3 in 16 isn't supported yet", null);
 			//System.out.printf("Area-> %s%n", atoc);
 			ds.seek((START_OF_MASTER_TOC + 1) * (sectorSize) + sectorStartOffset);
@@ -272,7 +272,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	void initBuffers(int overrun) {
 		if (frmHdrSize == 0 && dst == null)
 			throw new IllegalStateException("Area TOC wasn't processed yet");
-		block = SACD_LSN_SIZE - frmHdrSize;
+		block = sectorSize - frmHdrSize;
 		if (dst == null) {
 			buff = new byte[block + (overrun * getNumChannels())];
 			header = new byte[frmHdrSize];
