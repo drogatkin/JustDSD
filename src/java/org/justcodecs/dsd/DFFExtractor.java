@@ -17,7 +17,7 @@ public class DFFExtractor {
 	}
 
 	public static void main(String... args) {
-		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2014 D. Rogatkin%n");
+		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2015 D. Rogatkin%n");
 		if (args.length == 0) {
 			displayHelp();
 			System.exit(1);
@@ -95,7 +95,7 @@ public class DFFExtractor {
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only%n        p - play specified file instead of extraction");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1)%n        p - play specified file instead of extraction");
 	}
 
 	public static class ExtractionProblem extends Exception {
@@ -170,9 +170,9 @@ public class DFFExtractor {
 					} else {
 						cuew.write(String.format("  TRACK 01 AUDIO%n"));
 						cuew.write(String.format("    TITLE \"%s\"%n",
-								Utils.nvl(normalizeName(tracks[track - 1].get("title")))));
+								Utils.nvl(normalizeName(tracks[track].get("title")))));
 						cuew.write(String.format("    PERFORMER \"%s\"%n",
-								Utils.nvl(normalizeName(tracks[track - 1].get("performer")))));
+								Utils.nvl(normalizeName(tracks[track].get("performer")))));
 						cuew.write(String.format("    INDEX 01 00:00:00%n"));
 					}
 					cuew.flush();
@@ -208,7 +208,7 @@ public class DFFExtractor {
 			dff.writeLong(len);
 		} catch (Exception e) {
 			//e.printStackTrace();
-			throw new ExtractionProblem(e.getMessage());
+			throw new ExtractionProblem(""+e);
 		} finally {
 			try {
 				dff.close();
