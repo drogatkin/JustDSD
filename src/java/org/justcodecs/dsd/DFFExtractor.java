@@ -5,6 +5,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
+import java.net.URL;
+import java.net.URLDecoder;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
@@ -64,7 +66,14 @@ public class DFFExtractor {
 			}
 		else
 			try {
-				System.out.printf("Extracting... it may take awhile... ");
+				if (isoF.toUpperCase().startsWith("FILE:/")) {
+					try {
+						isoF = new URL(URLDecoder.decode(isoF, "UTF-8")).getFile();
+					} catch (Exception e) {
+						// ignore
+					}	
+				}
+				System.out.printf("Extracting... %s it may take awhile... ", isoF);
 				long st = System.currentTimeMillis();
 				extractDff(new File(isoF), new File(trgDir), track, cue, ove, new Progress() {
 					long t;
