@@ -1,8 +1,9 @@
 package org.justcodecs.dsd;
 
+import java.io.DataInput;
 import java.io.IOException;
 
-public interface DSDStream {
+public interface DSDStream extends DataInput {
 
 	boolean canSeek();
 
