@@ -1,6 +1,5 @@
 package org.justcodecs.dsd;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.justcodecs.dsd.DSTDecoder.DSTException;
@@ -28,7 +27,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		super.init(ds);
 		BaseChunk c = BaseChunk.create(dsdStream, metadataCharset);
 		if (c instanceof ChunkFRM8 == false)
-			throw new DecodeException("Invalid diff format, no FRAME chunk",
+			throw new DecodeException("Invalid .dff format, no FRAME chunk",
 					null);
 		// c.skip(dsdStream);
 		frm = (ChunkFRM8) c;
