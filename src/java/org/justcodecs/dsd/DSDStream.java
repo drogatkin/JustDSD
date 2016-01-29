@@ -8,6 +8,8 @@ public interface DSDStream extends DataInput {
 	boolean canSeek();
 
 	public void readFully(byte[] b, int off, int len) throws IOException;
+	
+	public int read(byte[] b, int off, int len) throws IOException;
 
 	public long readLong(boolean lsb) throws IOException;
 	
