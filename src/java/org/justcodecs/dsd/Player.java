@@ -41,7 +41,7 @@ public class Player {
 		Decoder decoder = createDecoder();
 		long sampleCount = 0;
 		try {
-			DSDFormat dsd;
+			DSDFormat<?> dsd;
 			if (f.endsWith(".dsf")) {
 				dsd = new DSFFormat();
 			} else if (f.endsWith(".iso")) {
@@ -126,7 +126,7 @@ public class Player {
 		System.out.printf("Total samples: %d%n", sampleCount);
 	}
 
-	protected SourceDataLine getDSDLine(DSDFormat dsd) {
+	protected SourceDataLine getDSDLine(DSDFormat<?> dsd) {
 		try {
 			return AudioSystem.getSourceDataLine(new AudioFormat(new AudioFormat.Encoding("DSD_UNSIGNED"),
 					dsd.getSampleRate(), 1, dsd.getNumChannels(), 4, dsd.getSampleRate()/32,
