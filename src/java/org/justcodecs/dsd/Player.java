@@ -16,7 +16,7 @@ import org.justcodecs.dsd.Decoder.PCMFormat;
 public class Player {
 
 	public static void main(String[] args) {
-		System.out.printf("Java DSD player for PCM DAC  (c) 2015-2016 D. Rogatkin%n");
+		System.out.printf("Java DSD player for PCM DAC  (c) 2015-2017 D. Rogatkin%n");
 		if (args.length == 0) {
 			System.out.printf("Please use with at least one .dsf, .dff, or [SACD].iso file argument%n");
 			System.exit(-1);

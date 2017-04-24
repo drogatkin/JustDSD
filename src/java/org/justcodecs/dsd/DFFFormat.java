@@ -135,8 +135,8 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		}
 		// if (sampleNum < getSampleCount())
 		try {
-			// System.out.printf("Start play %d for sample %d, frm %s%n",
-			// dsdStream.getFilePointer(), sampleNum, frm.props.dsd);
+			 //System.out.printf("Start play %d for sample %d, frm %s%n",
+			 //dsdStream.getFilePointer(), sampleNum, frm.props.dsd);
 			filePosition = frm.props.dsd.start + (sampleNum / 8)
 					* getNumChannels();
 			dsdStream.seek(filePosition);

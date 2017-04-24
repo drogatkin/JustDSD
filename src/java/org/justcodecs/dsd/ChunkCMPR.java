@@ -1,7 +1,6 @@
 package org.justcodecs.dsd;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 

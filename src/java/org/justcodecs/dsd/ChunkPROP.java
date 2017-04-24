@@ -20,15 +20,15 @@ public class ChunkPROP extends BaseChunk {
 			if ("SND ".equals(new String(IDBuf)) == false)
 				throw new DecodeException("PROP chunk isn't SND", null);
 			for (;;) {
-				// read local chinks
+				// read local chunks
 				BaseChunk c = BaseChunk.create(ds, this);
 				if (c instanceof ChunkFS)
 					sampleRate = ((ChunkFS) c).sampleRate;
 				else if (c instanceof ChunkCHNL)
 					channels = ((ChunkCHNL) c).numChannels;
-				else if (c instanceof ChunkCMPR)
+				else if (c instanceof ChunkCMPR) {
 					comp = ((ChunkCMPR) c).compression;
-				else if (c instanceof ChunkDITI)
+				} else if (c instanceof ChunkDITI)
 					getFRM8().metaAttrs .put("Title",((ChunkDITI) c).title);
 				else if (c instanceof ChunkDSD) {
 					dsd = (ChunkDSD) c;

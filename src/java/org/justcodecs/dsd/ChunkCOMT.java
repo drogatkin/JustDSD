@@ -24,7 +24,7 @@ public class ChunkCOMT extends BaseChunk {
 		short cmtType; // comment type
 		short cmtRef; // comment reference
 		//ulong count; // string length
-		String commentText; // text } Comment;
+		String commentText; // text
 
 		void read(DSDStream ds, Calendar c) throws IOException {
 			timeStampYear = ds.readShort(true);
