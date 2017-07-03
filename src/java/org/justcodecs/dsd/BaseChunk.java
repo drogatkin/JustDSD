@@ -63,6 +63,7 @@ public class BaseChunk {
 			size = ds.readLong(true);
 			start = ds.getFilePointer();
 			//System.out.printf("Current %x,  size %d 0f %s%n", start, size,this);
+			//System.out.printf("%s ends %d%n", this, start+size);
 			if (size <= 0)
 				throw new DecodeException("Invalid size " + size + " of " + new String(IDBuf), null);
 		} catch (IOException e) {
