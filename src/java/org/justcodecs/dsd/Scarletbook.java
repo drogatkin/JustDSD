@@ -579,19 +579,20 @@ public interface Scarletbook {
 		}
 
 		int addText(byte[] data, String name, int cp, String encoding) {
+			int size = Math.min(data.length - cp, 255);
 			try {
-				for (int len = 0; len < 255; len++) {
+				for (int len = 0; len < size; len++) {
 					if (data[cp + len] == 0) {
 						if (len > 0)
 							put(name, new String(data, cp, len, encoding));
 						return len;
 					}
 				}
-				put(name, new String(data, cp, 255, encoding));
+				put(name, new String(data, cp, size, encoding));
 			} catch (UnsupportedEncodingException e) {
-				put(name, new String(data, cp, 255));
+				put(name, new String(data, cp, size));
 			}
-			return 255;
+			return size;
 		}
 
 		@Override
@@ -605,7 +606,7 @@ public interface Scarletbook {
 		byte[] id = new byte[8];
 		TrackInfo[] infos;
 		int startOffset;
-		byte data[] = new byte[4096];
+		byte data[] = new byte[4096*2];
 		
 
 		public TrackText(byte trackCount, int offs) {
