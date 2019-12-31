@@ -149,7 +149,8 @@ public class Decoder implements Filters {
 		//return -1;
 		int[][] samplesInt = null;
 		short[][] samplesShort = null;
-		double[][] samplesFloat = null;
+		double[][] samplesDouble = null;
+		float[][] samplesFloat = null;
 		boolean roundToInt = true;
 		int nsc = 0;
 		int slen = 0;
@@ -157,11 +158,16 @@ public class Decoder implements Filters {
 			samplesShort = (short[][]) samples;
 			nsc = samplesShort.length;
 			slen = samplesShort[0].length;
-		} else if (samples instanceof double[][]) {
-			samplesFloat = (double[][]) samples;
+		} else if (samples instanceof float[][]) {
+			samplesFloat = (float[][]) samples;
 			roundToInt = false;
 			nsc = samplesFloat.length;
 			slen = samplesFloat[0].length;
+		} else if (samples instanceof double[][]) {
+			samplesDouble = (double[][]) samples;
+			roundToInt = false;
+			nsc = samplesDouble.length;
+			slen = samplesDouble[0].length;
 		} else if (samples instanceof int[][]) {
 			samplesInt = (int[][]) samples;
 			nsc = samplesInt.length;
@@ -192,7 +198,7 @@ public class Decoder implements Filters {
 		}
 		if (ils) {
 			for (int i = 0; i < slen; i++) {
-				// filter each chan in turn
+				// filter each channel in turn
 				for (int c = 0; c < nsc; c++) {
 					double sum = 0.0;
 					for (int t = 0, b = 0, nLookupTable = lookupTable.length; t < nLookupTable; t++, b += nsc) {
@@ -218,7 +224,7 @@ public class Decoder implements Filters {
 						else
 							samplesShort[c][i] = (short) Math.round(sum);
 					else
-						samplesFloat[c][i] = (sum);
+						samplesFloat[c][i] = (float) (sum);
 				}
 				// step the buffer
 				dsdf.bufPos += nStep * nsc;
@@ -255,7 +261,7 @@ public class Decoder implements Filters {
 						else
 							samplesShort[c][i] = (short) Math.round(sum);
 					else
-						samplesFloat[c][i] = (sum);
+						samplesFloat[c][i] = (float) (sum);
 				}
 				// step the buffer
 				dsdf.bufPos += nStep;
@@ -269,6 +275,10 @@ public class Decoder implements Filters {
 	}
 
 	public int decodePCM(int[]... channels) throws DecodeException {
+		return getSamples1(scale, 0, clipping, channels);
+	}
+	
+	public int decodePCM(float[]... channels) throws DecodeException {
 		return getSamples1(scale, 0, clipping, channels);
 	}
 

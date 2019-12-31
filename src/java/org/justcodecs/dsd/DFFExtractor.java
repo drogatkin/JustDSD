@@ -19,7 +19,7 @@ public class DFFExtractor {
 	}
 
 	public static void main(String... args) {
-		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2015 D. Rogatkin%n");
+		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2015-2020 D. Rogatkin%n");
 		if (args.length == 0) {
 			displayHelp();
 			System.exit(1);
