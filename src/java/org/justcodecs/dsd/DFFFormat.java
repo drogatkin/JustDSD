@@ -188,22 +188,19 @@ public class DFFFormat extends DSDFormat<byte[]> {
 	}
 
 	void seekDST(long sampleNum) throws DecodeException {
+		final boolean local_debug = false;
 		try {
-			if (sampleNum == 0) {
-				dsdStream.seek(frm.props.dst.info.start
+			dsdStream.seek(frm.props.dst.info.start
 						+ frm.props.dst.info.size);
-				// System.out.printf("Start play 0x%x for sample %d, frm %s total %d%n",
-				// dsdStream.getFilePointer(),
-				// dstFrmNo, frm.props.dst, frm.props.dst.info.numFrames);
-			} else {
+			if (sampleNum > 0) {
 				int seekChunk = (int) (sampleNum * frm.props.dst.info.numFrames / getSampleCount());
-				dsdStream.seek(frm.props.dst.info.start
-						+ frm.props.dst.info.size);
+				
 				// position in file, read buff, find signature
 				// or use ChunkDSTI when avail
-				// System.out.printf("Start play 0x%x for sample %d, frm %d total %d%n",
-				// dsdStream.getFilePointer(),
-				// dstFrmNo, seekChunk, frm.props.dst.info.numFrames);
+				if (local_debug)
+				 System.out.printf("Start play 0x%x (0%d) for sample %d, frm %d total %d%n",
+				 dsdStream.getFilePointer(),
+				 dstFrmNo, seekChunk, frm.props.dst.info.numFrames);
 				// TODO crc chunk presence and adjust jump
 				BaseChunk c = BaseChunk.create(dsdStream, (BaseChunk) null);
 				if (c instanceof ChunkDSTC)

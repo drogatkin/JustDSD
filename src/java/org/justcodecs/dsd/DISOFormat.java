@@ -318,6 +318,11 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 
 	@Override
 	void seek(long sampleNum) throws DecodeException {
+		final boolean local_debug = false;
+		if (local_debug) {
+			System.out.printf("Sample %d%n", sampleNum);
+		}
+
 		synchronized (this) {
 			if (processor != null && processor.isAlive()) {
 				if (seekSample < 0) {
@@ -336,7 +341,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				//	((long)textDuration)*getSampleRate(), textDuration, sampleNum, sampleNum/getSampleRate());
 				if (textDuration > 0) {
 					sampleNum = Math.round(getTimeAdjustment() * sampleNum);
-					//System.out.printf("adjusted %d (%ds) / %f%n", sampleNum, sampleNum/getSampleRate(), adj);
+					//System.out.printf("adjusted %d (%ds) / %f%n", sampleNum, sampleNum/getSampleRate(), getTimeAdjustment());
 				}
 				if (sampleNum >= getSampleCount())
 					throw new DecodeException("Trying to seek non existing sample " + sampleNum, null);
@@ -347,6 +352,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 						atoc.track_end - atoc.track_start, getSampleCount() / getSampleRate(), currentFrame,
 						atoc.track_end - atoc.track_start);*/
 				if (isDST()) {
+					if (local_debug)
+						System.out.printf("Skip info tracks%n");
 					do {
 						if (sectorStartOffset > 0)
 							dsdStream.readFully(header, 0, sectorStartOffset);
@@ -356,11 +363,18 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 							dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
 						}
 					} while (frmHeader.frame_info_count == 0);
+					
 					int seekSec = (int) (sampleNum / getSampleRate());
 					int currentSec = frmHeader.getMinutes(0) * 60 + frmHeader.getSeconds(0);
-					sampleNum += (seekSec - currentSec) * getSampleRate();
+					sampleNum += ((long)(seekSec - currentSec)) * getSampleRate();
+					System.out.printf("Seek sec %d, current %d%n", seekSec, currentSec);
 					currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
-					dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
+					if (local_debug) {
+						System.out.printf("Current frm %d for sample %d%n", currentFrame, sampleNum);
+						System.out.printf("Seeking %d starting %d plus current %d mul %d%n", (atoc.track_start + currentFrame) * sectorSize,
+								atoc.track_start, currentFrame, sectorSize);
+					}
+					dsdStream.seek(((long) (atoc.track_start + currentFrame)) * sectorSize);
 					dstSeek = currentFrame > 0;
 				}
 			} else

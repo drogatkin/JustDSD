@@ -16,13 +16,25 @@ import org.justcodecs.dsd.Decoder.PCMFormat;
 public class Player {
 
 	public static void main(String[] args) {
-		System.out.printf("Java DSD player for PCM DAC  (c) 2015-2019 D. Rogatkin%n");
+		System.out.printf("Java DSD player for PCM DAC  (c) 2015-2020 D. Rogatkin%n");
 		if (args.length == 0) {
 			System.out.printf("Please use with at least one .dsf, .dff, or [SACD].iso file argument%n");
 			System.exit(-1);
 			return;
 		}
-
+		try {
+			if (args.length == 2 && Integer. parseInt(args[1]) > 0) {
+				try {
+					new Player().play(args[0], Integer. parseInt(args[1]));
+				} catch (DecodeException e) {
+					System.out.printf("Couldn't play %s, because %s%n", args[0], e);
+					e.printStackTrace();
+				}
+				return;
+			}
+		} catch(Exception e) {
+			
+		}
 		for (String f : args) {
 			try {
 				new Player().play(f);
@@ -36,8 +48,12 @@ public class Player {
 	Decoder createDecoder() {
 		return new Decoder();
 	}
-
+	
 	public void play(String f) throws Decoder.DecodeException {
+		play(f, 0);
+	}
+
+	public void play(String f, int off) throws Decoder.DecodeException {
 		Decoder decoder = createDecoder();
 		long sampleCount = 0;
 		try {
@@ -58,6 +74,7 @@ public class Player {
 			dsd.init(new Utils.RandomDSDStream(new File(f)));
 			decoder.init(dsd);
 			System.out.printf("Playing ... %s%n", dsd);
+			
 			SourceDataLine dl = getDSDLine(dsd);
 			if (dl != null) {
 				byte[] samples = new byte[2 * 2048];
@@ -90,7 +107,11 @@ public class Player {
 				int bytesChannelSample = 2; //pcmf.bitsPerSample / 8;
 				int bytesSample = channels * bytesChannelSample;
 				byte[] playBuffer = new byte[bytesSample * 2048];
-				decoder.seek(0);
+				if (off > 0) {
+					//System.out.printf("search %d sampl rate %d%n", off, decoder.getSampleRate());
+					decoder.seek(((long)off) * decoder.getSampleRate() /*44100* 64l*/);
+				} else
+					decoder.seek(0);
 				int testSeek = 0;
 				do {
 					int nsampl = decoder.decodePCM(samples);
