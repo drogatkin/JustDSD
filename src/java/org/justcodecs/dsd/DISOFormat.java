@@ -295,8 +295,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			buff = new byte[(dst.FrameHdr.MaxFrameLen + overrun) * dst.FrameHdr.NrOfChannels];
 			dsdBuf = new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]; //??
 			frmHeader = new FrmHeader();
-			for (int i = 0; i < QUEUE_SIZE; i++)
-				usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]);
+			//for (int i = 0; i < QUEUE_SIZE; i++)
+				//usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]);
 			header = new byte[12];
 		}
 	}
@@ -367,7 +367,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					int seekSec = (int) (sampleNum / getSampleRate());
 					int currentSec = frmHeader.getMinutes(0) * 60 + frmHeader.getSeconds(0);
 					sampleNum += ((long)(seekSec - currentSec)) * getSampleRate();
-					System.out.printf("Seek sec %d, current %d%n", seekSec, currentSec);
+					if (local_debug) {
+						System.out.printf("Seek sec %d, current %d%n", seekSec, currentSec);
+					}
 					currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
 					if (local_debug) {
 						System.out.printf("Current frm %d for sample %d%n", currentFrame, sampleNum);
@@ -400,10 +402,14 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	boolean readDSTDataBlockAsync() throws DecodeException {
 		if (processor == null) {
 			synchronized (this) {
+				//if (usedBuffs.remainingCapacity() == 0)
+				for (int i = 0; i < QUEUE_SIZE; i++) // reassure empty buffs
+					usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]);
 				processor = new Thread(this);
 				processor.setName("DST decoder");
 				processor.setDaemon(true);
 				processor.start();
+				//System.out.printf("Starting decode DST thread / buff %s%n", decodedBuffs);
 			}
 		} else {
 			if (processor.isAlive() == false)
@@ -418,7 +424,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				else
 					return false;
 			}
-			//System.out.printf("GOt decoded %n");
+			//System.out.printf("Got decoded buff%n");
 			int delta = bufPos < 0 ? 0 : bufEnd - bufPos;
 			if (delta > 0)
 				System.arraycopy(buff, bufPos, buff, 0, delta);
@@ -448,6 +454,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 	}
 
 	public void run() {
+		//System.out.printf("Starting processing thread%n");
 		for (;;) {
 			try {
 				synchronized (this) {
@@ -475,7 +482,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					// completing current buffer
 					if (dstLen > 0) { // complete previous
 						byte[] dsdBuff;
+						//System.out.printf("Unprocessed len %d, in buff %d%n", dstLen, usedBuffs.size());
 						dst.FramDSTDecode(dstBuff, dsdBuff = getProcessed(), dstLen, lastFrm);
+						//System.out.printf("Put buf %d%n", dsdBuff.length);
 						putForProcessing(dsdBuff);
 						dstLen = 0;
 						continue;
@@ -498,9 +507,10 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					if (skip > 0)
 						dsdStream.readFully(dstPakBuf, 0, skip);
 					else if (skip < 0)
-						throw new DecodeException("Problem in DST decoding in frame " + currentFrame, null);
+						throw new DecodeException("Problem in DST decoding in the frame " + currentFrame, null);
 				}
 			} catch (InterruptedException e) {
+				//e.printStackTrace();
 				break;
 			} catch (Throwable t) {
 				//t.printStackTrace();
@@ -558,6 +568,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				processor = null;
 		}
 		super.close();
+		//System.out.println("???close");
 	}
 
 }
