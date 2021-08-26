@@ -15,8 +15,10 @@ import org.justcodecs.dsd.Decoder.PCMFormat;
 
 public class Player {
 
+	static final String ERR_CANTPLAY= "Couldn't play %s, because %s%n";
+	
 	public static void main(String[] args) {
-		System.out.printf("Java DSD player for PCM DAC  (c) 2015-2020 D. Rogatkin%n");
+		System.out.printf("Java DSD player for PCM DAC  (c) 2015-2021 D. Rogatkin%n");
 		if (args.length == 0) {
 			System.out.printf("Please use with at least one .dsf, .dff, or [SACD].iso file argument%n");
 			System.exit(-1);
@@ -27,7 +29,7 @@ public class Player {
 				try {
 					new Player().play(args[0], Integer. parseInt(args[1]));
 				} catch (DecodeException e) {
-					System.out.printf("Couldn't play %s, because %s%n", args[0], e);
+					System.out.printf(ERR_CANTPLAY, args[0], e);
 					e.printStackTrace();
 				}
 				return;
@@ -39,7 +41,7 @@ public class Player {
 			try {
 				new Player().play(f);
 			} catch (DecodeException e) {
-				System.out.printf("Couldn't play %s, because %s%n", f, e);
+				System.out.printf(ERR_CANTPLAY, f, e);
 				e.printStackTrace();
 			}
 		}
