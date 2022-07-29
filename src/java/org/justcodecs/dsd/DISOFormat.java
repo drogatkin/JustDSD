@@ -403,7 +403,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 		if (processor == null) {
 			synchronized (this) {
 				//if (usedBuffs.remainingCapacity() == 0)
-				for (int i = 0; i < QUEUE_SIZE; i++) // reassure empty buffs
+				for (int i = usedBuffs.size(); i < QUEUE_SIZE; i++) // reassure empty buffs
 					usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels]);
 				processor = new Thread(this);
 				processor.setName("DST decoder");

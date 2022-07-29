@@ -53,7 +53,7 @@ public class DSTDecoder {
 	static final int MAX_DSDBYTES_INFRAME = 18816;
 
 	static final int MAX_CHANNELS = 6;
-	static final int MAX_DSDBITS_INFRAME = (588 * 64);
+	static final int MAX_DSDBITS_INFRAME = (588 * 64 * 4); // 64
 	static final int MAXNROF_SEGS = 8; /* max nr of segments per channel for filters or Ptables */
 
 	static final int PBITS = AC_BITS; /* number of bits for Probabilities             */

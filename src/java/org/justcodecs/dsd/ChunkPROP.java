@@ -47,7 +47,7 @@ public class ChunkPROP extends BaseChunk {
 				} else if (c instanceof ChunkID3) {
 					
 				}
-				//System.out.printf("--->%s at %x s+s%x (%x)%n", c, ds.getFilePointer(), c.start+c.size, c.start);
+				//System.out.printf("--->%s at %x st+si=%x (%x) par:st+si=%x%n", c, ds.getFilePointer(), c.start+c.size, c.start, parent.start + parent.size);
 				if (ds.getFilePointer() >= parent.start + parent.size)
 					break;
 			}

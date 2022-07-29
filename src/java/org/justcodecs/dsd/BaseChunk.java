@@ -73,7 +73,7 @@ public class BaseChunk {
 
 	void skip(DSDStream ds) throws DecodeException {
 		try {
-			ds.seek(start + size);
+			ds.seek(start + size + (size & 1));
 		} catch (IOException e) {
 			throw new DecodeException("", e);
 		}

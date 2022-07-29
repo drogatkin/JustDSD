@@ -1,5 +1,6 @@
 package org.justcodecs.dsd;
 
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.HashMap;
 
@@ -50,6 +51,15 @@ public class ChunkID3 extends BaseChunk {
 		}
 		skip(ds);
 	}
+	
+	/*@Override
+	void skip(DSDStream ds) throws DecodeException {
+		try {
+			ds.seek(start + size + (size & 1));
+		} catch (IOException e) {
+			throw new DecodeException("", e);
+		}
+	}*/
 	
 	protected void storeAttr(HashMap<String, Object> attrs, ID3v2 id3, String name, int id) {
 		try {

@@ -19,7 +19,7 @@ public class DFFExtractor {
 	}
 
 	public static void main(String... args) {
-		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2015-2020 D. Rogatkin%n");
+		System.out.printf("Java SACD ISO -> DFF extractor/player  (c) 2015-2022 D. Rogatkin%n");
 		if (args.length == 0) {
 			displayHelp();
 			System.exit(1);
@@ -32,6 +32,7 @@ public class DFFExtractor {
 		boolean tre = false;
 		boolean ove = false;
 		boolean ply = false;
+		boolean id3 = false;
 		for (String arg : args) {
 			if ("-d".equals(arg))
 				tde = true;
@@ -50,6 +51,8 @@ public class DFFExtractor {
 					ove = true;
 				else if ("-p".equals(arg))
 					ply = true;
+				else if ("-3".equals(arg))
+					id3 = true;
 				else {
 					isoF = arg;
 					break;
@@ -75,7 +78,7 @@ public class DFFExtractor {
 				}
 				System.out.printf("Extracting... %s it may take awhile... ", isoF);
 				long st = System.currentTimeMillis();
-				extractDff(new File(isoF), new File(trgDir), track, cue, ove, new Progress() {
+				Progress progress = new Progress() {
 					long t;
 					long s;
 
@@ -88,23 +91,28 @@ public class DFFExtractor {
 
 					@Override
 					public void progress(long current) {
+						if (current == 0)
+							return;
 						long r = (System.currentTimeMillis()-s)*(t-current)/current / 1000;
 						System.out.printf("%3.2f%% to complete in %d:%02d  \r", current * 100.0 / t, r/60, r%60);
-
 					}
 
-				});
+				};
+				if (isoF.toLowerCase().endsWith(".dff")) 
+					extractDff(new File(isoF), new File(trgDir), id3, ove, progress);
+				else
+					extractDff(new File(isoF), new File(trgDir), track, cue, ove, progress);
 				st = System.currentTimeMillis() - st;
 				st /= 1000;
 				System.out.printf("Done in %d:%02d                %n", st / 60, st % 60);
 			} catch (ExtractionProblem e) {
-				System.out.printf("Problem %s%n", e);
+				System.out.printf("Problem: %s%n", e);
 			}
 	}
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1)%n        p - play specified file instead of extraction");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] [-3] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1)%n        p - play specified file instead of extraction");
 	}
 
 	public static class ExtractionProblem extends Exception {
@@ -113,6 +121,57 @@ public class DFFExtractor {
 		}
 	}
 
+	public static void extractDff(File dff, File target, boolean id3, boolean ove, Progress progress)
+			throws ExtractionProblem {
+		File df = new File(target, dff.getName());
+		if (df.exists() && !ove)
+			throw new ExtractionProblem("File " + df + " already exists");
+		RandomAccessFile res = null;
+		DFFFormat fmt = new DFFFormat();
+		long seek = 0;
+		try {
+			fmt.init(new Utils.RandomDSDStream(dff));
+			if (!fmt.isDST())
+				throw new ExtractionProblem("The file "+dff+" isn't DST encoded");
+			res = new RandomAccessFile(df, "rw");
+			long hdrSize = writeDFFHeader(res, fmt);
+			long len = 0;
+			fmt.initBuffers(1024);
+			byte samples[] = fmt.getSamples();
+			fmt.seek(seek);
+			if (progress != null) {
+					progress.init(fmt.getSampleCount() * fmt.getNumChannels() / 8, df, null);
+			}
+			//System.out.printf("bloks %d  buf %d%n", fmt.frm.props.dst.info.numFrames, fmt.buff.length);
+			while(fmt.decodeDSTDataBlock()) {
+				//System.out.printf("block # %d at %d  buf %d%n", fmt.dstFrmNo, fmt.bufEnd, fmt.buff.length);
+				res.write(samples, 0, fmt.bufEnd);
+				fmt.bufPos = fmt.bufEnd;
+				len += fmt.bufEnd;
+				if (progress != null)
+					progress.progress(len);
+			}
+			res.writeByte(0);
+			res.seek(4);
+			res.writeLong(len + hdrSize - 12);
+			res.seek(hdrSize - 8);
+			res.writeLong(len);	
+			if (id3 ) {
+				
+			}
+		} catch( ExtractionProblem e) {
+			 throw e;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new ExtractionProblem(""+e);
+		} finally {
+			try {
+				res.close();
+			} catch (Exception e) {
+			}
+		}
+	}
+	
 	public static void extractDff(File iso, File target, int track, boolean cue, boolean ove, Progress progress)
 			throws ExtractionProblem {
 		RandomAccessFile dff = null;
@@ -277,7 +336,7 @@ public class DFFExtractor {
 		return String.format("\"%s\"", normalizeName(s));
 	}
 
-	private static long writeDFFHeader(RandomAccessFile dff, DISOFormat dsf) throws IOException {
+	private static long writeDFFHeader(RandomAccessFile dff, DSDFormat dsf) throws IOException {
 		/*
 		 *  write DSDIFF(DSD) header
 		 *  ----------------------------

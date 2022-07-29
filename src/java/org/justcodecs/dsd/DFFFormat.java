@@ -165,6 +165,7 @@ public class DFFFormat extends DSDFormat<byte[]> {
 			if (bufPos < 0)
 				bufPos = 0;
 			int delta = bufEnd - bufPos;
+			
 			if (delta > 0)
 				System.arraycopy(buff, bufPos, buff, 0, delta);
 			int dlen = (int) (dst.FrameHdr.NrOfBitsPerCh
