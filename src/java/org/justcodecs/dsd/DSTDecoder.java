@@ -3,6 +3,8 @@ package org.justcodecs.dsd;
 import java.util.Arrays;
 
 public class DSTDecoder {
+	
+	// the code is inspired: https://github.com/DocMarty84/sacd
 	static final int RESOL = 8;
 	static final int SIZE_MAXFRAMELEN = 4; /* Number of bits for representing framelength 
 											in the frame header */
@@ -53,7 +55,7 @@ public class DSTDecoder {
 	static final int MAX_DSDBYTES_INFRAME = 18816;
 
 	static final int MAX_CHANNELS = 6;
-	static final int MAX_DSDBITS_INFRAME = (588 * 64 * 4); // 64
+	static final int MAX_DSDBITS_INFRAME = (588 * 64 * 4); // 64, 128, 256
 	static final int MAXNROF_SEGS = 8; /* max nr of segments per channel for filters or Ptables */
 
 	static final int PBITS = AC_BITS; /* number of bits for Probabilities             */
@@ -629,11 +631,20 @@ public class DSTDecoder {
 				End = Start + S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
 				for (BitNr = Start; BitNr < End; BitNr++) {
 					/*Table4Bit[ChNr]*/Table4BitCh[BitNr] = Val;
+					/*int p = Table4BitCh[BitNr / 2];
+					int s = (BitNr & 1) << 2;
+					Table4BitCh[p] = (byte) (((Val << s) & 255) | (Table4BitCh[p] & ((0xf0 >> s) & 255)));*/
 				}
 				Start += S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
 			}
 			Val = (byte) (S.Table4Segment[ChNr][SegNr] &255);
-			Arrays.fill(Table4BitCh, Start, Table4BitCh.length, Val); // !! NrOfBitsPerCh
+			/*for ( BitNr = Start; BitNr < NrOfBitsPerCh; BitNr++)
+	        {
+	        	int p = Table4BitCh[BitNr / 2];
+				int s = (BitNr & 1) << 2;
+				Table4BitCh[p] = (byte) (((Val << s) & 255) | (Table4BitCh[p] & ((0xf0 >> s) & 255)));
+	        }*/
+			Arrays.fill(Table4BitCh, Start, NrOfBitsPerCh, Val); // !! NrOfBitsPerCh
 		}
 	}
 
@@ -1512,7 +1523,7 @@ public class DSTDecoder {
 		
 		int NrOfChannels = FrameHdr.NrOfChannels;
 		if (FrameHdr.DSTCoded == 1) {
-			//System.out.printf("Decoding%n");
+			//System.out.printf("Decoding %d%n", NrOfBitsPerCh);
 			int i;
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.FSeg, FrameHdr.Filter4Bit);
 			FillTable4Bit(FrameHdr.NrOfChannels, NrOfBitsPerCh, FrameHdr.PSeg, FrameHdr.Ptable4Bit);

@@ -153,13 +153,16 @@ public class DFFFormat extends DSDFormat<byte[]> {
 		if (dstFrmNo >= frm.props.dst.info.numFrames)
 			return false;
 		try {
-			if (dsdStream.readInt(true) == DSTF)
+			int type = dsdStream.readInt(true);
+			if (type == DSTF)
 				dstf.read(dsdStream);
-			else if (dsdStream.readInt(true) == DSTC) {
+			else if (type == DSTC) {
 				dstc.read(dsdStream);
 				if (dsdStream.readInt(true) != DSTF)
 					new DecodeException("Unexpected chunk format", null);
 				dstf.read(dsdStream);
+			} else {
+				throw new DSTException("Unknown DST type "+type, 0);
 			}
 
 			if (bufPos < 0)
