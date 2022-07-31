@@ -151,14 +151,34 @@ public class DFFExtractor {
 				if (progress != null)
 					progress.progress(len);
 			}
-			res.writeByte(0);
+			//res.writeByte(0);
+			long id3len = 0;
+			if (id3 && fmt.frm.props.id3 != null) {
+				//System.out.printf("ID3%n", null);
+				res.writeBytes("ID3 ");
+				res.writeLong(fmt.frm.props.id3.size);
+				fmt.dsdStream.seek(fmt.frm.props.id3.start);
+				byte[] buf = new byte[1024*32];
+				id3len = fmt.frm.props.id3.size;
+				do {
+					int rdlen = fmt.dsdStream.read(buf,  0, (int)Math.min((long)buf.length, id3len));
+					if(rdlen > 0) {
+						res.write(buf, 0, rdlen);
+						id3len -= rdlen;
+					} else
+						throw new IOException("Premature eof for writing ID3");
+				} while (id3len > 0);
+				if ((fmt.frm.props.id3.size & 1) == 1)
+					res.writeByte(0);
+				id3len = 4 + 8 + fmt.frm.props.id3.size + (fmt.frm.props.id3.size & 1);
+			} else
+				res.writeByte(0);
 			res.seek(4);
-			res.writeLong(len + hdrSize - 12);
+			res.writeLong(len + hdrSize - 12 + id3len);
+			//System.out.printf("updating frm size %x %x %x%n", len , hdrSize , id3len);
 			res.seek(hdrSize - 8);
 			res.writeLong(len);	
-			if (id3 ) {
-				
-			}
+			
 		} catch( ExtractionProblem e) {
 			 throw e;
 		} catch (Exception e) {
@@ -356,12 +376,7 @@ public class DFFExtractor {
 		dff.writeLong(4);
 		dff.writeInt(0x01040000);
 		dff.writeBytes("PROP");
-		dff.writeInt(0);
-		int size = 66 + 4 * dsf.getNumChannels();
-		dff.writeByte(0);
-		dff.writeByte(0);
-		dff.writeByte((size >> 8) & 255);
-		dff.writeByte(size & 255);
+		dff.writeLong(66l + 4 * dsf.getNumChannels());
 		dff.writeBytes("SND ");
 		dff.writeBytes("FS  ");
 		dff.writeLong(4);
@@ -382,8 +397,7 @@ public class DFFExtractor {
 			break;
 		}
 		dff.writeBytes("CHNL");
-		size = 2 + 4 * dsf.getNumChannels();
-		dff.writeLong(size);
+		dff.writeLong(2l + 4 * dsf.getNumChannels());
 
 		//dff.writeByte((size >> 8) & 255);
 		//dff.writeByte(size & 255);

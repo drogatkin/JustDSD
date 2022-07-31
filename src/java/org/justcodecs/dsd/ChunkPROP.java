@@ -10,6 +10,7 @@ public class ChunkPROP extends BaseChunk {
 	String comp;
 	ChunkDSD dsd;
 	ChunkDST dst;
+	ChunkID3 id3;
 	long bound;
 
 	@Override
@@ -45,9 +46,9 @@ public class ChunkPROP extends BaseChunk {
 						//break;
 					}
 				} else if (c instanceof ChunkID3) {
-					
+					id3 = (ChunkID3)c;
 				}
-				//System.out.printf("--->%s at %x st+si=%x (%x) par:st+si=%x%n", c, ds.getFilePointer(), c.start+c.size, c.start, parent.start + parent.size);
+				//System.out.printf("--->%s at end %x st+si=%x (%x) par:st+si=%x%n", c, ds.getFilePointer(), c.start+c.size, c.start, parent.start + parent.size);
 				if (ds.getFilePointer() >= parent.start + parent.size)
 					break;
 			}
