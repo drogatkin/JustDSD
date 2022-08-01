@@ -42,6 +42,11 @@ For example:
 ```
 james@proba-desktop:~/projects/JustDSD$ bee dff -- -3 "/media/dsd/Music/Robin Trower - Bridge Of Sighs (1974, RE2014, Germany, DST128)/A1 - Day Of The Eagle.dff"
 ```
+If you plan to ship the tool to somebody and do not want to deal with dependencies, then **jdsd-nodep.jar** gets generated in lib directory.
+Use:
+```
+java -jar jdsd-nodep.jar ..parameters
+```
 
 ## Acknowledgment
 Special thanks to Peter McQuillan without his valuable information and testing efforts this project wasn't possible
