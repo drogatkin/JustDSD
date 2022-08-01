@@ -113,7 +113,7 @@ public class DFFExtractor {
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] [-3] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1)%n        p - play specified file instead of extraction");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] [-3] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1)%n        p - play specified file instead of extraction%n        3 - preserve ID3 tags%n");
 	}
 
 	public static class ExtractionProblem extends Exception {
