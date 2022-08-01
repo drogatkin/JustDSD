@@ -7,6 +7,7 @@ import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.file.Files;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
@@ -126,13 +127,14 @@ public class DFFExtractor {
 		File df = new File(target, dff.getName());
 		if (df.exists() && !ove)
 			throw new ExtractionProblem("File " + df + " already exists");
-		if (df.equals(dff)) {
-			throw new ExtractionProblem("File " + df + " is input file too");
-		}
+		
 		RandomAccessFile res = null;
 		DFFFormat fmt = new DFFFormat();
 		long seek = 0;
 		try {
+			if (df.exists() && Files.isSameFile(df.toPath(), dff.toPath())) {
+				throw new ExtractionProblem("File " + df + " is the same as the input file");
+			}
 			fmt.init(new Utils.RandomDSDStream(dff));
 			if (!fmt.isDST())
 				throw new ExtractionProblem("The file "+dff+" isn't DST encoded");
