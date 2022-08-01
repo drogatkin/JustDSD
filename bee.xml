@@ -232,6 +232,21 @@
       </onexception>
     </task>
   </target>
+  
+  <target name="jar-all" dir="PROJECT_HOME">
+    <echo>Bulding jar-nodep &build_directory;/&build_file;/., ${CUSTOM CP}/....</echo>
+  	<dependency target="jar"/>
+  	<block>
+  	   <function name="rm">
+  	      <parameter value="&build_directory;/&project;-nodep.jar"/>
+  	   </function>
+  	   <function name="zip">
+  	        <parameter value="&build_directory;/&project;-nodep.jar"/>
+  	        <parameter value="&build_directory;/&build_file;!."/>
+  	        <parameter value="${CUSTOM CP}!."/>
+  	   </function>
+  	</block>
+  </target>
 
   <target name="clean" dir="PROJECT_HOME">
     <dependency>
@@ -264,7 +279,7 @@
   </expression>
 
   <target name="ana" dir="PROJECT_HOME">
-    <echo>Running analiz...</echo>
+    <echo>Running analyzer...</echo>
     <dependency target="jar"/>
     <dependency value="true"/>
     <task name="main" code="org.justcodecs.dsd.DecoderInt" path="run class path">
@@ -283,7 +298,7 @@
 
   <target name="run" dir="PROJECT_HOME">
     <echo>Running...</echo>
-    <dependency target="jar"/>
+    <dependency target="jar-all"/>
     <dependency value="true"/>
     <task name="main" code="&main_class;" path="run class path">
        <parameter variable="~#args#~"/>
