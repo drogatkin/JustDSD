@@ -1,7 +1,7 @@
 # JustDSD
 
 DSD audio format decoder and PCM encoder.
-It supports .DSF (Sony) and .DIFF (Philips), and SACD containers including DST decompressor.
+It supports .DSF (Sony) and .DIFF (Philips), and SACD containers including a DST decompressor.
 ID3V2 metadata support provided by <a href="https://github.com/drogatkin/tiny-codec/tree/master/tools/ID3V2">tiny-codec</a>
 
 There is Android client for extracting dff <a href="https://play.google.com/store/apps/details?id=rogatkin.mobile.app.dsdboss" target="_blank">DSD Boss</a> 
@@ -9,8 +9,9 @@ There is Android client for extracting dff <a href="https://play.google.com/stor
 ## Build and run
 
 Make sure you have 7Bee installed, visit [7Bee](https://github.com/drogatkin/7Bee). Type:
-
-'bee'
+```
+bee
+```
 
 in the project root directory and make sure that the build runs and you get welcome message as:
 ```
@@ -34,9 +35,9 @@ Modify [env.xml](https://github.com/drogatkin/JustDSD/blob/4a597ecacdb69813c3131
 specify a correct jar location.
 
 If you plan to use DST decompressor, then use bee target **dff**
-
+```
 bee dff
-
+```
 For example:
 ```
 james@proba-desktop:~/projects/JustDSD$ bee dff -- -3 "/media/dsd/Music/Robin Trower - Bridge Of Sighs (1974, RE2014, Germany, DST128)/A1 - Day Of The Eagle.dff"
