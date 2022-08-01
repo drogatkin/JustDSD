@@ -126,6 +126,9 @@ public class DFFExtractor {
 		File df = new File(target, dff.getName());
 		if (df.exists() && !ove)
 			throw new ExtractionProblem("File " + df + " already exists");
+		if (df.equals(dff)) {
+			throw new ExtractionProblem("File " + df + " is input file too");
+		}
 		RandomAccessFile res = null;
 		DFFFormat fmt = new DFFFormat();
 		long seek = 0;

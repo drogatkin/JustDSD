@@ -20,7 +20,7 @@ public class ChunkID3 extends BaseChunk {
 		if (f8 == null)
 			throw new DecodeException("ID3 chink appeared out of FRM8 scope", null);
 		//new Exception(" start "+start+" parent "+parent).printStackTrace();
-		System.out.printf("Read ID 3%n");
+		//System.out.printf("Read ID 3%n");
 		try {
 			// TODO read chunk in memory and then process as stream (BytesArrayStream)
 			ID3v2 id3 = new ID3v2(io = new IOAdapter((RandomAccessFile) ds), f8.encoding);
