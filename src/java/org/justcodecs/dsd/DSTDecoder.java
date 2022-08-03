@@ -626,16 +626,18 @@ public class DSTDecoder {
 
 		for (ChNr = 0; ChNr < NrOfChannels; ChNr++) {
 			byte[] Table4BitCh = Table4Bit[ChNr];
+			int[] SegmentLenChNr = S.SegmentLen[ChNr];
 			for (SegNr = 0, Start = 0; SegNr < S.NrOfSegments[ChNr] - 1; SegNr++) {
 				Val = (byte) S.Table4Segment[ChNr][SegNr];
 				End = Start + S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
-				for (BitNr = Start; BitNr < End; BitNr++) {
-					/*Table4Bit[ChNr]*/Table4BitCh[BitNr] = Val;
+				Arrays.fill(Table4BitCh, Start, End, Val);
+				//for (BitNr = Start; BitNr < End; BitNr++) {
+				//	/*Table4Bit[ChNr]*/Table4BitCh[BitNr] = Val;
 					/*int p = Table4BitCh[BitNr / 2];
 					int s = (BitNr & 1) << 2;
 					Table4BitCh[p] = (byte) (((Val << s) & 255) | (Table4BitCh[p] & ((0xf0 >> s) & 255)));*/
-				}
-				Start += S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
+				//}
+				Start += S.Resolution * 8 * SegmentLenChNr[SegNr];
 			}
 			Val = (byte) (S.Table4Segment[ChNr][SegNr] &255);
 			/*for ( BitNr = Start; BitNr < NrOfBitsPerCh; BitNr++)
@@ -1537,7 +1539,7 @@ public class DSTDecoder {
 
 			for (BitNr = 0; BitNr < NrOfBitsPerCh; BitNr++) {
 				int ByteNr = BitNr / 8;
-
+				
 				for (ChNr = 0; ChNr < NrOfChannels; ChNr++) {
 					short Predict = 0;
 					short Residual = 0;
@@ -1584,10 +1586,11 @@ public class DSTDecoder {
 					//System.out.printf(" %x %x %d %d-%d %b%n", MuxedDSDdata[ByteNr * NrOfChannels + ChNr], BitVal, ByteNr * NrOfChannels + ChNr, Residual, Predict, BitNr < FrameHdr.NrOfHalfBits[ChNr]); 
 
 					/* Update filter */
+					int[] LT_StatusChNr = LT_Status[ChNr];
 					for (i = 15; i > 0; i--) {
-						LT_Status[ChNr][i] =  ((LT_Status[ChNr][i] << 1) | ((LT_Status[ChNr][i-1] >> 7) & 1)) &255;
+						LT_StatusChNr[i] =  ((LT_StatusChNr[i] << 1) | ((LT_StatusChNr[i-1] >> 7) & 1)) &255;
 					}
-					LT_Status[ChNr][0] = ((LT_Status[ChNr][0] << 1) | BitVal) & 255;
+					LT_StatusChNr[0] = ((LT_StatusChNr[0] << 1) | BitVal) & 255;
 				}
 			}
 
@@ -1600,7 +1603,7 @@ public class DSTDecoder {
 		}
 	}
 
-	void FramDSTDecode(byte[] DSTdata, byte[][] DSDdata, int FrameSizeInBytes, int FrameCnt) throws DSTException {
+	void FramDSTDecode(byte[] DSTdata, byte[][] DSDdata, int FrameSizeInBytes, int FrameCnt, byte[] MuxedDSDdataPre) throws DSTException {
 		int BitNr;
 		int ChNr;
 		int ACError = 0;
@@ -1613,7 +1616,7 @@ public class DSTDecoder {
 		FrameHdr.CalcNrOfBytes = FrameSizeInBytes;
 		FrameHdr.CalcNrOfBits = FrameHdr.CalcNrOfBytes * 8;
 		/* unpack DST frame: segmentation, mapping, arithmetic data */
-		byte[] MuxedDSDdata = new byte[1024 * 64];
+		byte[] MuxedDSDdata = MuxedDSDdataPre == null?new byte[1024 * 64]:MuxedDSDdataPre;
 		UnpackDSTframe(DSTdata, MuxedDSDdata);
 
 		if (FrameHdr.DSTCoded == 1) {
