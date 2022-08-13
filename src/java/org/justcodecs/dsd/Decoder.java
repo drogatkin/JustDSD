@@ -193,8 +193,11 @@ public class Decoder implements Filters {
 			throw new DecodeException("Unsupported buffer type", null);
 		boolean ils = buffi != null;
 		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTable.length * (ils ? nsc : 1) > dsdf.bufEnd) {
+			
 			if (dsdf.readDataBlock() == false)
 				return -1;
+			if (dsamples instanceof byte[])
+				buffi = (byte[]) dsdf.getSamples();
 		}
 		if (ils) {
 			for (int i = 0; i < slen; i++) {
@@ -231,6 +234,8 @@ public class Decoder implements Filters {
 				if (dsdf.bufPos + lookupTable.length * nsc > dsdf.bufEnd) {
 					if (dsdf.readDataBlock() == false)
 						return i; // was zeroing start
+					if (dsamples instanceof byte[])
+						buffi = (byte[]) dsdf.getSamples();
 				}
 			}
 		} else {
@@ -268,6 +273,8 @@ public class Decoder implements Filters {
 				if (dsdf.bufPos + lookupTable.length > dsdf.bufEnd) {
 					if (dsdf.readDataBlock() == false)
 						return i; // was zeroing start
+					if (dsamples instanceof byte[])
+						buffi = (byte[]) dsdf.getSamples();
 				}
 			}
 		}

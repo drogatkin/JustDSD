@@ -289,7 +289,7 @@
 
   <target name="dff" dir="PROJECT_HOME">
     <echo>Extracting...</echo>
-    <dependency target="jar"/>
+    <dependency target="jar-all"/>
     <dependency value="true"/>
     <task name="main" code="&domain;.justcodecs.dsd.DFFExtractor" path="run class path">
        <parameter variable="~#args#~"/>

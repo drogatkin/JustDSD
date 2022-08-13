@@ -129,7 +129,7 @@ public class DFFExtractor {
 			throw new ExtractionProblem("File " + df + " already exists");
 		
 		RandomAccessFile res = null;
-		DFFFormat fmt = new DFFFormat();
+		DFFFormatMt fmt = new DFFFormatMt();
 		long seek = 0;
 		try {
 			if (df.exists() && Files.isSameFile(df.toPath(), dff.toPath())) {
@@ -142,13 +142,14 @@ public class DFFExtractor {
 			long hdrSize = writeDFFHeader(res, fmt);
 			long len = 0;
 			fmt.initBuffers(1024);
-			byte samples[] = fmt.getSamples();
+			byte samples[] = (byte[]) fmt.getSamples();
 			fmt.seek(seek);
 			if (progress != null) {
 					progress.init(fmt.getSampleCount() * fmt.getNumChannels() / 8, df, null);
 			}
 			//System.out.printf("bloks %d  buf %d%n", fmt.frm.props.dst.info.numFrames, fmt.buff.length);
-			while(fmt.decodeDSTDataBlock()) {
+			while(fmt.readDataBlock()) {
+				samples = (byte[]) fmt.getSamples();
 				//System.out.printf("block # %d at %d  buf %d%n", fmt.dstFrmNo, fmt.bufEnd, fmt.buff.length);
 				res.write(samples, 0, fmt.bufEnd);
 				fmt.bufPos = fmt.bufEnd;
@@ -190,6 +191,7 @@ public class DFFExtractor {
 			e.printStackTrace();
 			throw new ExtractionProblem(""+e);
 		} finally {
+			fmt.close();
 			try {
 				res.close();
 			} catch (Exception e) {

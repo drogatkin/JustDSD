@@ -594,7 +594,7 @@ public class DSTDecoder {
 	StrData S; /* DST data stream */
 	DSTXBITSData DstXbits;
 	FirPtrData FirPtrs;
-	short[][] BitStream11; /* Contains the bitstream of a complete        */
+	//short[][] BitStream11; /* Contains the bitstream of a complete        */
 	//byte[][] BitStream11;
 	byte BitMask[] = new byte[RESOL];
 	ACData AC;
@@ -1400,7 +1400,7 @@ public class DSTDecoder {
 		FirPtrs = new FirPtrData();
 		FirPtrs.Pnt = new int[FrameHdr.NrOfChannels];
 		FirPtrs.Status = new int[FrameHdr.NrOfChannels][(1 << SIZE_CODEDPREDORDER)];
-		BitStream11 = new short[FrameHdr.NrOfChannels][(int) FrameHdr.NrOfBitsPerCh];
+	//	BitStream11 = new short[FrameHdr.NrOfChannels][(int) FrameHdr.NrOfBitsPerCh];
 		//BitStream11 = new byte[FrameHdr.NrOfChannels][(int) FrameHdr.NrOfBitsPerCh/8];
 		/* Fill BitMask array (1, 2, 4, 8, 16, 32, 64, 128) */
 		for (int BitNr = 0; BitNr < 8; BitNr++) {
@@ -1438,7 +1438,7 @@ public class DSTDecoder {
 			if (Dummy != 0) {
 				throw new DSTException(String.format("Illegal stuffing pattern in frame %d!", FrameHdr.FrameNr), 0);
 			}
-			System.out.printf("Processing dsd frame%n");
+			//System.out.printf("Processing dsd frame%n");
 			/* Read DSD data and put in output stream */
 			ReadDSDframe(S, FrameHdr.MaxFrameLen, FrameHdr.NrOfChannels, DSDdataframe);
 		} else {
@@ -1536,7 +1536,7 @@ public class DSTDecoder {
 			AC.LT_ACDecodeBit_Init(AData, ADataLen);
 			ACError = AC.LT_ACDecodeBit_Decode(Reverse7LSBs((short) FrameHdr.ICoefA[0][0]), AData, ADataLen);
 			Arrays.fill(MuxedDSDdata, 0, NrOfBitsPerCh * NrOfChannels / 8, (byte) 0);
-
+			
 			for (BitNr = 0; BitNr < NrOfBitsPerCh; BitNr++) {
 				int ByteNr = BitNr / 8;
 				
@@ -1586,11 +1586,15 @@ public class DSTDecoder {
 					//System.out.printf(" %x %x %d %d-%d %b%n", MuxedDSDdata[ByteNr * NrOfChannels + ChNr], BitVal, ByteNr * NrOfChannels + ChNr, Residual, Predict, BitNr < FrameHdr.NrOfHalfBits[ChNr]); 
 
 					/* Update filter */
-					int[] LT_StatusChNr = LT_Status[ChNr];
+					/*int[] LT_StatusChNr = LT_Status[ChNr];
 					for (i = 15; i > 0; i--) {
 						LT_StatusChNr[i] =  ((LT_StatusChNr[i] << 1) | ((LT_StatusChNr[i-1] >> 7) & 1)) &255;
 					}
-					LT_StatusChNr[0] = ((LT_StatusChNr[0] << 1) | BitVal) & 255;
+					LT_StatusChNr[0] = ((LT_StatusChNr[0] << 1) | BitVal) & 255;*/
+					for (i = 15; i > 0; i--) {
+						ChannelStatus[i] =  ((ChannelStatus[i] << 1) | ((ChannelStatus[i-1] >> 7) & 1)) &255;
+					}
+					ChannelStatus[0] = ((ChannelStatus[0] << 1) | BitVal) & 255;
 				}
 			}
 

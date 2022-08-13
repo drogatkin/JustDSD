@@ -434,7 +434,7 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			bufPos = 0;
 			bufEnd = delta + dsdLen;
 			return true;
-		} catch (InterruptedException e) {
+		} catch (InterruptedException ignore) {
 
 		} catch (Throwable t) {
 			//t.printStackTrace();

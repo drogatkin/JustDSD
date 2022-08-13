@@ -58,14 +58,15 @@ public class Player {
 	public void play(String f, int off) throws Decoder.DecodeException {
 		Decoder decoder = createDecoder();
 		long sampleCount = 0;
+		DSDFormat<?> dsd = null;
 		try {
-			DSDFormat<?> dsd;
+			
 			if (f.endsWith(".dsf")) {
 				dsd = new DSFFormat();
 			} else if (f.endsWith(".iso")) {
 				dsd = new DISOFormat();
 			} else
-				dsd = new DFFFormat();
+				dsd = new DFFFormatMt();
 			if (f.toUpperCase().startsWith("FILE:/")) {
 				try {
 					f = new URL(URLDecoder.decode(f, "UTF-8")).getFile();
@@ -144,6 +145,9 @@ public class Player {
 			throw new Decoder.DecodeException("Not found " + f, e);
 		} catch (LineUnavailableException e) {
 			throw new Decoder.DecodeException("Can't play this format", e);
+		} finally {
+			if (dsd != null)
+				dsd.close();
 		}
 		decoder.dispose();
 		System.out.printf("Total samples: %d%n", sampleCount);
