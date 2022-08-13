@@ -29,9 +29,9 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 
 	ArrayBlockingQueue<DSTDecoderMt> finishedDecoders;
 
-	ExecutorService decodersThread;
+	ExecutorService decoderThreads;
 
-	ExecutorService processingThread;
+	Thread processingThread;
 
 	AtomicLong seekSample = new AtomicLong(-1);
 
@@ -97,10 +97,13 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 				for (int d = 0; d < DECODERS; d++) {
 					freeDecoders.offer(new DSTDecoderMt(getNumChannels(), getSampleRate() / 44100));
 				}
-				decodersThread = Executors.newFixedThreadPool(DECODERS);
+				decoderThreads = Executors.newFixedThreadPool(DECODERS);
 
 				finishedDecoders = new ArrayBlockingQueue<>(DECODERS, true);
-				processingThread = Executors.newSingleThreadExecutor();
+				
+				processingThread = new Thread(this);
+				processingThread.setName("DST decoder");
+				processingThread.setDaemon(true);
 
 			} catch (DSTException e) {
 				clean();
@@ -113,10 +116,11 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	protected void clean() {
 		freeDecoders = null;
 		finishedDecoders = null;
-		if (processingThread != null)
-			processingThread.shutdown();
-		if (decodersThread != null)
-			decodersThread.shutdown();
+		if (processingThread != null && processingThread.isAlive())
+			processingThread.interrupt();
+		processingThread = null;
+		if (decoderThreads != null)
+			decoderThreads.shutdown();
 	}
 
 	@Override
@@ -211,7 +215,8 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	void seek(long sampleNum) throws DecodeException {
 		if (isDST()) {
 			seekSample.getAndSet(sampleNum);
-			decodersThread.execute(this);
+			if (processingThread.isAlive() == false)
+				processingThread.start();
 			return;
 		}
 		// if (sampleNum < getSampleCount())
@@ -329,7 +334,7 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 				// System.out.printf("Decoder %s %b %d%n", decoder, decoder.isFinished(),
 				// decoder.dstFrmNo);
 				finishedDecoders.offer(decoder);
-				decodersThread.execute(() -> {
+				decoderThreads.execute(() -> {
 					try {
 						decoder.framDSTDecode();
 
