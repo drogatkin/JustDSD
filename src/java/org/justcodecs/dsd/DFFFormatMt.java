@@ -23,7 +23,7 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 
 	int DECODERS = 5;
 
-	final byte[] EMPTY_BUF = new byte[0];
+	final static byte[] EMPTY_BUF = new byte[0];
 
 	ArrayBlockingQueue<DSTDecoderMt> freeDecoders;
 
@@ -34,6 +34,8 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	Thread processingThread;
 
 	AtomicLong seekSample = new AtomicLong(-1);
+
+	static final boolean DEBUG = false;
 
 	static class DSTDecoderMt {
 		DSTDecoder dst;
@@ -100,7 +102,7 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 				decoderThreads = Executors.newFixedThreadPool(DECODERS);
 
 				finishedDecoders = new ArrayBlockingQueue<>(DECODERS, true);
-				
+
 				processingThread = new Thread(this);
 				processingThread.setName("DST decoder");
 				processingThread.setDaemon(true);
@@ -137,8 +139,8 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 			try {
 				return decodeDSTDataBlockMt();
 			} catch (DecodeException | InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if (DEBUG)
+					e.printStackTrace();
 				throw new DecodeException("IO exception at reading samples", e);
 			}
 		}
@@ -221,8 +223,9 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 		}
 		// if (sampleNum < getSampleCount())
 		try {
-			System.out.printf("Start play %d for sample %d, frm %s%n", dsdStream.getFilePointer(), sampleNum,
-					frm.props.dsd);
+			// System.out.printf("Start play %d for sample %d, frm %s%n",
+			// dsdStream.getFilePointer(), sampleNum,
+			// frm.props.dsd);
 			filePosition = frm.props.dsd.start + (sampleNum / 8) * getNumChannels();
 			dsdStream.seek(filePosition);
 			bufPos = -1;
@@ -304,6 +307,8 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	@Override
 	public void run() {
 		do {
+			if (decodingException != null)
+				break;
 			try {
 				DSTDecoderMt decoder = freeDecoders.take();
 				decoder.reset();
@@ -325,7 +330,7 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 					if (type == DSTF)
 						decoder.dstf.read(dsdStream);
 					else
-						throw new DSTException("Unknown DST chunk type " + type, 0);
+						throw new DSTException("Unexpected DST chunk type " + type, 0);
 				} else {
 					throw new DSTException("Unknown DST chunk type " + type, 0);
 				}
@@ -333,35 +338,36 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 				decoder.dstFrmNo = dstFrmNo;
 				// System.out.printf("Decoder %s %b %d%n", decoder, decoder.isFinished(),
 				// decoder.dstFrmNo);
-				finishedDecoders.offer(decoder);
+				finishedDecoders.offer(decoder); // no reason to check if accepted
 				decoderThreads.execute(() -> {
 					try {
 						decoder.framDSTDecode();
 
 					} catch (DSTException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						if (DEBUG)
+							e.printStackTrace();
+						decodingException = e;
 					}
 
 				});
 
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if (DEBUG)
+					e.printStackTrace();
 				break;
 			} catch (DecodeException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if (DEBUG)
+					e.printStackTrace();
 				decodingException = e;
 				break;
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if (DEBUG)
+					e.printStackTrace();
 				decodingException = e;
 				break;
 			} catch (DSTException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if (DEBUG)
+					e.printStackTrace();
 				decodingException = e;
 				break;
 			}

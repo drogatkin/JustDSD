@@ -64,7 +64,7 @@ public class Player {
 			if (f.endsWith(".dsf")) {
 				dsd = new DSFFormat();
 			} else if (f.endsWith(".iso")) {
-				dsd = new DISOFormat();
+				dsd = new DISOFormatMt();
 			} else
 				dsd = new DFFFormatMt();
 			if (f.toUpperCase().startsWith("FILE:/")) {
