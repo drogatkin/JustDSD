@@ -38,7 +38,7 @@ public class Decoder implements Filters {
 			throw new DecodeException("Target PCM format has to be set after calling init", null);
 		pcmf = f;
 		if (getSampleRate() % pcmf.sampleRate != 0)
-			throw new DecodeException("PCM sample rate doesn't multiply evenly 44100", null);
+			throw new DecodeException("PCM sample rate doesn't multiply evenly by 44100", null);
 		initParameters();
 		dsdf.initBuffers(initLookupTable());
 		rnd = new Random();
@@ -193,11 +193,10 @@ public class Decoder implements Filters {
 			throw new DecodeException("Unsupported buffer type", null);
 		boolean ils = buffi != null;
 		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTable.length * (ils ? nsc : 1) > dsdf.bufEnd) {
-			
 			if (dsdf.readDataBlock() == false)
 				return -1;
-			if (dsamples instanceof byte[])
-				buffi = (byte[]) dsdf.getSamples();
+		//	if (dsamples instanceof byte[])
+			//	buffi = (byte[]) dsdf.getSamples();
 		}
 		if (ils) {
 			for (int i = 0; i < slen; i++) {
@@ -234,8 +233,8 @@ public class Decoder implements Filters {
 				if (dsdf.bufPos + lookupTable.length * nsc > dsdf.bufEnd) {
 					if (dsdf.readDataBlock() == false)
 						return i; // was zeroing start
-					if (dsamples instanceof byte[])
-						buffi = (byte[]) dsdf.getSamples();
+					//if (dsamples instanceof byte[])
+						//buffi = (byte[]) dsdf.getSamples();
 				}
 			}
 		} else {
@@ -273,8 +272,8 @@ public class Decoder implements Filters {
 				if (dsdf.bufPos + lookupTable.length > dsdf.bufEnd) {
 					if (dsdf.readDataBlock() == false)
 						return i; // was zeroing start
-					if (dsamples instanceof byte[])
-						buffi = (byte[]) dsdf.getSamples();
+					//if (dsamples instanceof byte[])
+						//buffi = (byte[]) dsdf.getSamples();
 				}
 			}
 		}

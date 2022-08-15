@@ -5,14 +5,15 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.justcodecs.dsd.DFFFormatMt.DSTDecoderMt;
 import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
+// TODO consider extends DISOFormat
 public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runnable {
 	final static int QUEUE_SIZE = 5;
 	final static boolean DEBUG = true;
 	byte buff[];
+	
 	int sectorSize;
 	int sectorStartOffset;
 	TOC toc;
@@ -22,12 +23,10 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 	byte[] header;
 	int currentFrame;
 	int textDuration;
+	
 	// DST related
-
-	byte[] dstBuff;
-	// byte dstPakBuf[] = new byte[SACD_LSN_SIZE];
-	byte dsdBuf[];
 	int dstLen;
+	byte[] dstBuff;
 	boolean dstStart;
 	FrmHeader frmHeader;
 	int hdrIdx;
@@ -43,8 +42,6 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 	ArrayBlockingQueue<DSTDecoderMt> avalDecoders;
 	ArrayBlockingQueue<DSTDecoderMt> execDecoders;
 	ExecutorService workers;
-	
-	//byte dstPakBuf[] = new byte[SACD_LSN_SIZE];
 
 	static class DSTDecoderMt {
 		DSTDecoder dst;
@@ -57,7 +54,8 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 		public DSTDecoderMt(int noChan, int fs44) throws DSTException {
 			dst = new DSTDecoder();
 			dst.init(noChan, fs44);
-			dsdBuf = new byte[dst.FrameHdr.MaxFrameLen * dst.FrameHdr.NrOfChannels];
+			//System.out.printf("sixe %d vs %d%n", dst.FrameHdr.NrOfBitsPerCh/8, dst.FrameHdr.MaxFrameLen);
+			dsdBuf = new byte[dst.FrameHdr.NrOfChannels * dst.FrameHdr.MaxFrameLen];
 			dstBuff = new byte[MAX_DST_SIZE];
 		}
 
@@ -102,8 +100,6 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 				sectorStartOffset = 12;
 				// System.out.printf("!!%n");
 			}
-			// System.out.printf("[SACD] image %s at sector %d start area %x%n", toc,
-			// sectorSize, toc.area1Toc1Start * sectorSize);
 
 			ds.seek(toc.area1Toc1Start * sectorSize + sectorStartOffset);
 			atoc = new AreaTOC();
@@ -120,10 +116,13 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 				try {
 					
 					avalDecoders = new ArrayBlockingQueue<>(QUEUE_SIZE, false);
-
+					DSTDecoderMt dstd = null;
 					for (int d = 0; d < QUEUE_SIZE; d++) {
-						avalDecoders.offer(new DSTDecoderMt(getNumChannels(), getSampleRate() / 44100));
+						avalDecoders.offer(dstd  = new DSTDecoderMt(getNumChannels(), getSampleRate() / 44100));
 					}
+					assert dstd != null;
+					block = dstd.dst.FrameHdr.MaxFrameLen;
+					
 					workers = Executors.newFixedThreadPool(QUEUE_SIZE);
 
 					execDecoders = new ArrayBlockingQueue<>(QUEUE_SIZE, true);
@@ -244,24 +243,21 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 
 	@Override
 	void initBuffers(int overrun) {
-		block = SACD_LSN_SIZE - frmHdrSize;
-		tail = sectorSize - block - frmHdrSize - sectorStartOffset;
-		if (tail > 0)
-			block += tail;
 		// System.out.printf("sec size: %d, hdr: %d, block: %d ta: %d%n", sectorSize,
 		// frmHdrSize, block, tail);
 		if (!isDST()) {
+			block = SACD_LSN_SIZE - frmHdrSize;
+			tail = sectorSize - block - frmHdrSize - sectorStartOffset;
+			if (tail > 0)
+				block += tail;
 			buff = new byte[block + (overrun * getNumChannels())];
 			header = new byte[frmHdrSize + sectorStartOffset];
 		} else {
-			overrun = 0;
+			//if (overrun != 0)
+				//throw new RuntimeException("overun specifed for DST");
+			buff = new byte[(block + overrun) * getNumChannels()];
 			dstBuff = new byte[MAX_DST_SIZE]; // MAX_DST_SIZE
-			// buff = new byte[(dst.FrameHdr.MaxFrameLen + overrun) * getNumChannels()];
-			// dsdBuf = new byte[dst.FrameHdr.MaxFrameLen * getNumChannels()]; //??
 			frmHeader = new FrmHeader();
-			// for (int i = 0; i < QUEUE_SIZE; i++)
-			// usedBuffs.offer(new byte[dst.FrameHdr.MaxFrameLen *
-			// dst.FrameHdr.NrOfChannels]);
 			header = new byte[12];
 		}
 	}
@@ -389,29 +385,17 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 				return false;
 		}
 		try {
-			DSTDecoderMt decoder = execDecoders.peek();
-
-			if (decoder != null && decoder.isFinished()) {
-				execDecoders.remove(decoder);
-			} else {
-				if (decoder == null) {
-
-					//return false;
-				}
-				decoder = execDecoders.take();
-				// System.out.printf("Decoder %s %b %d%n",decoder, decoder.isFinished(),
-				// decoder.dstFrmNo);
-				synchronized (decoder) {
-					if (!decoder.isFinished())
-						decoder.wait();
-				}
-
+			DSTDecoderMt decoder = execDecoders.take();
+			synchronized (decoder) {
+				if (!decoder.isFinished())
+					decoder.wait();
 			}
-			byte[] pBuff = buff == null ? new byte[decoder.dsdBuf.length] : buff;
-			buff = decoder.dsdBuf;
-			decoder.dsdBuf = pBuff;
+			int delta = bufPos < 0 ? 0 : bufEnd - bufPos;
+			if (delta > 0)
+				System.arraycopy(buff, bufPos, buff, 0, delta);
+			System.arraycopy(decoder.dsdBuf, 0, buff, delta, decoder.dsdBuf.length);
 			bufPos = 0;
-			bufEnd = buff.length - 1;
+			bufEnd = delta + decoder.dsdBuf.length;
 			avalDecoders.offer(decoder);
 
 			return true;

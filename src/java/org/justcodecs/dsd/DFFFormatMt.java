@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.justcodecs.dsd.DSTDecoder.DSTException;
 import org.justcodecs.dsd.Decoder.DecodeException;
 
+// TODO consider to extend DFFFormat
 public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	ChunkFRM8 frm;
 	byte buff[];
@@ -95,10 +96,11 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 		if (isDST()) {
 			try {
 				freeDecoders = new ArrayBlockingQueue<>(DECODERS, false);
-
+				DSTDecoderMt dstd = null;
 				for (int d = 0; d < DECODERS; d++) {
-					freeDecoders.offer(new DSTDecoderMt(getNumChannels(), getSampleRate() / 44100));
+					freeDecoders.offer(dstd = new DSTDecoderMt(getNumChannels(), getSampleRate() / 44100));
 				}
+				block = dstd.dst.FrameHdr.MaxFrameLen;
 				decoderThreads = Executors.newFixedThreadPool(DECODERS);
 
 				finishedDecoders = new ArrayBlockingQueue<>(DECODERS, true);
@@ -189,11 +191,7 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 
 	@Override
 	void initBuffers(int overrun) {
-		if (!isDST())
-			buff = new byte[(block + overrun) * getNumChannels()];
-		else {
-
-		}
+		buff = new byte[(block + overrun) * getNumChannels()];
 	}
 
 	@Override
@@ -237,30 +235,21 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	}
 
 	boolean decodeDSTDataBlockMt() throws DecodeException, InterruptedException {
-		DSTDecoderMt decoder = finishedDecoders.peek();
-
-		if (decoder != null && decoder.isFinished()) {
-			finishedDecoders.remove(decoder);
-		} else {
-			if (decoder == null) {
-				if (dstFrmNo >= frm.props.dst.info.numFrames)
-					return false;
-
-			}
-			decoder = finishedDecoders.take();
-			// System.out.printf("Decoder %s %b %d%n",decoder, decoder.isFinished(),
-			// decoder.dstFrmNo);
-			synchronized (decoder) {
-				if (!decoder.isFinished())
-					decoder.wait();
-			}
-
+		if (dstFrmNo >= frm.props.dst.info.numFrames)
+			return false;
+		DSTDecoderMt decoder = finishedDecoders.take();
+		synchronized (decoder) {
+			if (!decoder.isFinished())
+				decoder.wait();
 		}
-		byte[] pBuff = buff == null ? new byte[decoder.dsdBuf.length] : buff;
-		buff = decoder.dsdBuf;
-		decoder.dsdBuf = pBuff;
+		int delta = bufPos < 0 ? 0 : bufEnd - bufPos;
+
+		if (delta > 0)
+			System.arraycopy(buff, bufPos, buff, 0, delta);
+		int dlen = decoder.dsdBuf.length;
+		System.arraycopy(decoder.dsdBuf, 0, buff, delta, dlen);
 		bufPos = 0;
-		bufEnd = buff.length - 1;
+		bufEnd = delta + dlen;
 		freeDecoders.offer(decoder);
 		return true;
 
