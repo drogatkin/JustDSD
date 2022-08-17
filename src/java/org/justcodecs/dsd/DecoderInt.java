@@ -52,8 +52,8 @@ public class DecoderInt extends Decoder /*implements FiltersInt */{
 		if (dsdf.bufPos < 0 || dsdf.bufPos + lookupTableI.length * (ils ? nsc : 1) > dsdf.bufEnd) {
 			if (dsdf.readDataBlock() == false)
 				return -1;
-			if (dsamples instanceof byte[])
-				buffi = (byte[]) dsdf.getSamples();
+			//if (dsamples instanceof byte[])
+				//buffi = (byte[]) dsdf.getSamples();
 		}
 		if (ils) {
 			for (int i = 0; i < samples[0].length; i++) {
@@ -81,8 +81,8 @@ public class DecoderInt extends Decoder /*implements FiltersInt */{
 				if (dsdf.bufPos + lookupTableI.length * nsc > dsdf.bufEnd) {
 					if (dsdf.readDataBlock() == false)
 						return i; // was zeroing start
-					if (dsamples instanceof byte[])
-						buffi = (byte[]) dsdf.getSamples();
+					//if (dsamples instanceof byte[])
+						//buffi = (byte[]) dsdf.getSamples();
 				}
 			}
 		} else {
@@ -113,8 +113,8 @@ public class DecoderInt extends Decoder /*implements FiltersInt */{
 				if (dsdf.bufPos + lookupTableI.length > dsdf.bufEnd) {
 					if (dsdf.readDataBlock() == false)
 						return i; // was zeroing start
-					if (dsamples instanceof byte[])
-						buffi = (byte[]) dsdf.getSamples();
+					//if (dsamples instanceof byte[])
+						//buffi = (byte[]) dsdf.getSamples();
 				}
 			}
 		}

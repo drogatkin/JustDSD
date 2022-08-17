@@ -172,16 +172,20 @@ public class DFFFormatMt extends DSDFormat<byte[]> implements Runnable {
 	}
 
 	@Override
-	public int getSampleRate() {
-		return frm.props.sampleRate;
+	public int getSampleRate() { 
+		return frm.props.sampleRate; 
 	}
 
 	@Override
 	public long getSampleCount() {
 		if (!isDST())
 			return (frm.props.dsd.dataEnd - frm.props.dsd.start) * (8 / getNumChannels());
-		else
-			return frm.props.dst.info.numFrames / frm.props.dst.info.rate * getSampleRate();
+		else {
+			long res = frm.props.dst.info.numFrames / frm.props.dst.info.rate * getSampleRate();
+			if (res < 0)
+				return -res;
+			return res;
+		}
 	}
 
 	@Override

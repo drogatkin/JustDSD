@@ -43,6 +43,7 @@ public class DISOFormatMt extends DSDFormat<byte[]> implements Scarletbook, Runn
 	ArrayBlockingQueue<DSTDecoderMt> execDecoders;
 	ExecutorService workers;
 
+	// TODO move this class to DST decoder and reuse across of formats
 	static class DSTDecoderMt {
 		DSTDecoder dst;
 		byte dstBuff[];
