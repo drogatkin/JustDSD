@@ -90,6 +90,13 @@ target run :.: {
                     ${main_class},
                     ~args~
                    )
+            } else {
+                  exec java (
+                    -cp,
+                     ${build_directory}/${build_file}:${CUSTOM CP},
+                    ${domain}.justcodecs.dsd.DFFExtractor,
+                    ~args~
+                   )
             }
         }
    }
