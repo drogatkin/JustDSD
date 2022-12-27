@@ -21,6 +21,7 @@ public class BaseChunk {
 		return create(ds, parent, null);
 	}
 
+	// TODO add MARK chunk
 	public static BaseChunk create(DSDStream ds, BaseChunk parent, String encoding) throws DecodeException {
 		try {
 			ds.readFully(IDBuf, 0, 4);
@@ -30,6 +31,7 @@ public class BaseChunk {
 						+ new String(IDBuf).trim());
 				result = (BaseChunk) chunkClass.newInstance();
 			} catch (ClassNotFoundException e) {
+				//System.out.printf("Chunk unk %s%n", new String(IDBuf));
 				result = new ChunkUNK();
 			}
 			result.parent = parent;

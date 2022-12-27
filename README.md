@@ -18,7 +18,7 @@ Type:
 ```
 bee
 ```
-in the project root directory and make sure that the build runs and you get welcome message as:
+in the project root directory and make sure that the build runs and you get a welcome message as:
 ```
 dmitriy@dmitriy-desktop:~/projects/JustDSD$ bee
 Compiling...

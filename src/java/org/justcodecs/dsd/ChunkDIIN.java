@@ -10,8 +10,9 @@ public class ChunkDIIN extends BaseChunk { // TODO introduce composite and simpl
 		super.read(ds);
 		try {			
 			for (;;) {
-				// read local chinks
+				// read local chunks
 				BaseChunk c = BaseChunk.create(ds, this);
+				//System.out.printf("Chunk->%s%n", c);
 				if (c instanceof ChunkDITI)
 					getFRM8().metaAttrs.put("Title", ((ChunkDITI)c).title); 
 				else if (c instanceof ChunkDIAR)
