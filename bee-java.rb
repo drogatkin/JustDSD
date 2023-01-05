@@ -36,7 +36,7 @@ target compile:. {
          -d,
          ${build_directory},
         -cp,
-         ${build_directory}:${CUSTOM CP},
+         ${build_directory}${~path_separator~}${CUSTOM CP},
          main src
        )     
       if {
@@ -86,14 +86,14 @@ target run :.: {
             then {
                 exec java (
                     -cp,
-                     ${build_directory}/${build_file}:${CUSTOM CP},
+                     ${build_directory}/${build_file}${~path_separator~}${CUSTOM CP},
                     ${main_class},
                     ~args~
                    )
             } else {
                   exec java (
                     -cp,
-                     ${build_directory}/${build_file}:${CUSTOM CP},
+                     ${build_directory}/${build_file}${~path_separator~}${CUSTOM CP},
                     ${domain}.justcodecs.dsd.DFFExtractor,
                     ~args~
                    )
