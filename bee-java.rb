@@ -8,7 +8,7 @@ doc_directory=doc
 build_file ="${project}.jar"
  domain ="org"
 resources ="${domain}.${project}.resources"
-manifestf =""
+manifest ="manifest.mf"
 main_class= "${domain}.justcodecs.dsd.Player"
 
 CUSTOM CP=../tiny-codec/tools/ID3V2/bin/id3v2.jar
@@ -58,7 +58,7 @@ target jar {
      
      {    display(Jarring ${build_file} ...)
           exec jar (
-            -cf,
+            -cmf, ${manifest},
             ${build_directory}/${build_file},
             -C,
             ${build_directory},
@@ -92,9 +92,8 @@ target run :.: {
                    )
             } else {
                   exec java (
-                    -cp,
-                     ${build_directory}/${build_file}${~path_separator~}${CUSTOM CP},
-                    ${domain}.justcodecs.dsd.DFFExtractor,
+                    -jar,
+                     ${build_directory}/${build_file},
                     ~args~
                    )
             }

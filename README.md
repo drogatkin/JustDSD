@@ -52,6 +52,7 @@ An example:
 ```
 java -jar jdsd-nodep.jar -3 "/media/dsd/Music/Robin Trower - Bridge Of Sighs (1974, RE2014, Germany, DST128)/A1 - Day Of The Eagle.dff"
 ```
+If you are not comfortable with using 7Bee, then you can try [RustBee](https://github.com/drogatkin/rust_utilities).
 
 ## Acknowledgment
 Special thanks to Peter McQuillan without his valuable information and testing efforts this project wasn't possible.
