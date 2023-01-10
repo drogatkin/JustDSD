@@ -1,17 +1,17 @@
 # a script example to build Java project 
 
 project =jdsd
-"build_directory" = ./lib
-source_directory ="src/java"
+"build_directory" = ${~cwd~}/lib
+source_directory ="${~cwd~}/src/java"
 #source_directory_extra ="diffutils/src"
-doc_directory=doc
+doc_directory=${~cwd~}/doc
 build_file ="${project}.jar"
  domain ="org"
 resources ="${domain}.${project}.resources"
 manifest ="manifest.mf"
 main_class= "${domain}.justcodecs.dsd.Player"
 
-CUSTOM CP=../tiny-codec/tools/ID3V2/bin/id3v2.jar
+CUSTOM CP=${~cwd~}/../tiny-codec/tools/ID3V2/bin/id3v2.jar
 
 target clean {
     dependency {true}
@@ -58,7 +58,7 @@ target jar {
      
      {    display(Jarring ${build_file} ...)
           exec jar (
-            -cmf, ${manifest},
+            -cmf, ${~cwd~}/${manifest},
             ${build_directory}/${build_file},
             -C,
             ${build_directory},
