@@ -10,6 +10,7 @@ build_file ="${project}.jar"
 resources ="${domain}.${project}.resources"
 manifest ="manifest.mf"
 main_class= "${domain}.justcodecs.dsd.Player"
+version=8
 
 CUSTOM CP=${~cwd~}/../tiny-codec/tools/ID3V2/bin/id3v2.jar
 
@@ -37,6 +38,10 @@ target compile:. {
          ${build_directory},
         -cp,
          ${build_directory}${~path_separator~}${CUSTOM CP},
+         -source,
+         version,
+         -target,
+         version,
          main src
        )     
       if {
