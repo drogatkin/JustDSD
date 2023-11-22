@@ -18,7 +18,7 @@ public class ChunkID3 extends BaseChunk {
 		IOAdapter io = null;
 		ChunkFRM8 f8 = getFRM8();
 		if (f8 == null)
-			throw new DecodeException("ID3 chink appeared out of FRM8 scope", null);
+			throw new DecodeException("ID3 chunk appeared out of FRM8 scope", null);
 		//new Exception(" start "+start+" parent "+parent).printStackTrace();
 		//System.out.printf("Read ID 3%n");
 		try {
