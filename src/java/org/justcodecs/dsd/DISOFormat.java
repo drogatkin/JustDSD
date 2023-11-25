@@ -348,9 +348,9 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 				currentFrame = (int) (sampleNum * (atoc.track_end - atoc.track_start) / getSampleCount());
 				dsdStream.seek((long) (atoc.track_start + currentFrame) * sectorSize);
 				//dstSeek = currentFrame > 0;
-				/*System.out.printf("Seek %ds,  len %db, tot %ds frame %d 0f %d%n", sampleNum / getSampleRate(),
+				/*System.out.printf("Seek %ds,  len %db, tot %ds frame %d 0f %d  DST %b%n", sampleNum / getSampleRate(),
 						atoc.track_end - atoc.track_start, getSampleCount() / getSampleRate(), currentFrame,
-						atoc.track_end - atoc.track_start);*/
+						atoc.track_end - atoc.track_start, isDST());*/
 				if (isDST()) {
 					if (local_debug)
 						System.out.printf("Skip info tracks%n");
@@ -366,7 +366,8 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 					
 					int seekSec = (int) (sampleNum / getSampleRate());
 					int currentSec = frmHeader.getMinutes(0) * 60 + frmHeader.getSeconds(0);
-					sampleNum += ((long)(seekSec - currentSec)) * getSampleRate();
+					if (seekSec > currentSec)
+						sampleNum += ((long)(seekSec - currentSec)) * getSampleRate();
 					if (local_debug) {
 						System.out.printf("Seek sec %d, current %d%n", seekSec, currentSec);
 					}

@@ -108,6 +108,8 @@ public class DFFExtractor {
 				System.out.printf("Done in %d:%02d                %n", st / 60, st % 60);
 			} catch (ExtractionProblem e) {
 				System.out.printf("Problem: %s%n", e);
+				if (e.getCause() != null)
+					e.getCause().printStackTrace();
 			}
 	}
 
@@ -188,8 +190,7 @@ public class DFFExtractor {
 		} catch( ExtractionProblem e) {
 			 throw e;
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new ExtractionProblem(""+e);
+			throw (ExtractionProblem)new ExtractionProblem(""+e).initCause(e);
 		} finally {
 			fmt.close();
 			try {
@@ -199,11 +200,19 @@ public class DFFExtractor {
 		}
 	}
 	
+	/**
+	 * 
+	 * @param iso
+	 * @param target a target directory 
+	 * @param track a track number starting from 1, 0 - extract entire image, -1 - extract all tracks, other number is an error
+	 * @param cue true to generate CUE
+	 * @param ove true to overwrite already existing files
+	 * @param progress reflets a progress
+	 * @throws ExtractionProblem
+	 */
 	public static void extractDff(File iso, File target, int track, boolean cue, boolean ove, Progress progress)
 			throws ExtractionProblem {
-		RandomAccessFile dff = null;
 		DISOFormat dsf = new DISOFormat();
-		OutputStreamWriter cuew = null;
 		try {
 			dsf.init(new Utils.RandomDSDStream(iso));
 			String album = (String) dsf.getMetadata("Album");
@@ -214,106 +223,103 @@ public class DFFExtractor {
 				album = album.substring(0, album.length() - 4);
 			}
 			Scarletbook.TrackInfo[] tracks = (Scarletbook.TrackInfo[]) dsf.getMetadata("Tracks");
-			File df = new File(target, normalize(album) + ".dff");
+			
 			File cuef = null;
 			long seek = 0;
 			long trackLen = 0;
-			if (tracks != null) {
-				Scarletbook.TrackInfo tr = null;
-				if (track > 0) {
-					track--;
-					if (track < tracks.length) {
-						tr = tracks[track];
-						seek = (long) tr.start * dsf.getSampleRate();
-						//System.out.printf("Seek to sampl %d at %d%n", seek, tr.start );
-						trackLen = (long) (tr.duration + 1) * dsf.getNumChannels() * dsf.getSampleRate() / 8;
-						album = Utils.nvl((String) tr.get("title"), String.format("Track %02d", track + 1));
-					}
+			int trns = track == -1 ? tracks != null ? tracks.length:0 : 0;
+			int ct = trns == 0? track > 0? track-1:-1: 0; 
+			do {
+				if (ct > -1) {
+					Scarletbook.TrackInfo tr = tracks[ct];
+					seek = (long) (tr.start > 0?(tr.start-1):tr.start) * dsf.getSampleRate();
+					//if (ct==0) seek=0;
+					//System.out.printf("Seek to sampl %d at %d tr %d%n", seek, tr.start , ct);
+					trackLen = (long) (tr.duration + 1) * dsf.getNumChannels() * dsf.getSampleRate() / 8;
+					album = Utils.nvl((String) tr.get("title"), String.format("Track %03d", ct + 1));
 				}
+				File df = new File(target, normalize(album) + ".dff");
+				if (df.exists() && !ove)
+					throw new ExtractionProblem("File " + df + " already exists");
+				try (RandomAccessFile dff = new RandomAccessFile(df, "rw");) {
+					long hdrSize = writeDFFHeader(dff, dsf);
+					long len = 0;
+					dsf.initBuffers(0);
+					byte samples[] = dsf.getSamples();
+					dsf.seek(seek); // TODO track
+					if (progress != null) {
+						if (trackLen > 0)
+							progress.init(trackLen, df, cuef);
+						else
+							progress.init(dsf.getSampleCount() * dsf.getNumChannels() / 8, df, cuef);
+					}
+					while (dsf.readDataBlock()) {
+						dff.write(samples, 0, dsf.bufEnd);
+						dsf.bufPos = dsf.bufEnd;
+						len += dsf.bufEnd;
+						if (progress != null)
+							progress.progress(len);
+						if (trackLen > 0 && len >= trackLen)
+							break;
+					}
+					dff.writeByte(0);
+					dff.seek(4);
+					dff.writeLong(len + hdrSize - 12);
+					dff.seek(hdrSize - 8);
+					dff.writeLong(len);
+				}
+				
 				if (cue) { // TODO can be created without tracks
 					cuef = new File(target, normalize(album) + ".cue");
 					if (cuef.exists() && !ove)
 						throw new ExtractionProblem("CUE " + cuef + " already exists");
-					cuew = new OutputStreamWriter(new FileOutputStream(cuef), "UTF-8");
-					cuew.write(String.format("REM GENRE \"%s\"%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
-					cuew.write(String.format("REM DATE %s%n", dsf.getMetadata("Year").toString()));
-					cuew.write(String.format("REM DISCID %s%n", quoteIt(dsf.toc.discCatalogNumber)));
-					cuew.write(String.format("REM TOTAL %02d:%02d%n", dsf.atoc.minutes, dsf.atoc.seconds));
-					cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
-					cuew.write(String.format("PERFORMER \"%s\"%n",
-							Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
-					cuew.write(String.format(
-							"TITLE \"%s\"%n",
-							Utils.nvl(normalizeName((String) dsf.getMetadata("Title")),
-									normalizeName((String) dsf.getMetadata("Album")), "NA")));
-					cuew.write(String.format("FILE \"%s\" WAVE%n", df.getName()));
-					if (tr == null) {
-						for (int t = 0; t < tracks.length; t++) {
-							cuew.write(String.format("  TRACK %02d AUDIO%n", t + 1));
+					try (OutputStreamWriter cuew = new OutputStreamWriter(new FileOutputStream(cuef), "UTF-8");) {
+					
+						cuew.write(String.format("REM GENRE \"%s\"%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
+						cuew.write(String.format("REM DATE %s%n", dsf.getMetadata("Year").toString()));
+						cuew.write(String.format("REM DISCID %s%n", quoteIt(dsf.toc.discCatalogNumber)));
+						cuew.write(String.format("REM TOTAL %02d:%02d%n", dsf.atoc.minutes, dsf.atoc.seconds));
+						cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
+						cuew.write(String.format("PERFORMER \"%s\"%n",
+								Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
+						cuew.write(String.format(
+								"TITLE \"%s\"%n",
+								Utils.nvl(normalizeName((String) dsf.getMetadata("Title")),
+										normalizeName((String) dsf.getMetadata("Album")), "NA")));
+						cuew.write(String.format("FILE \"%s\" WAVE%n", normalize(album) + ".dff"));
+						if (ct == -1) {
+							for (int t = 0; t < tracks.length; t++) {
+								cuew.write(String.format("  TRACK %02d AUDIO%n", t + 1));
+								cuew.write(String.format("    TITLE \"%s\"%n",
+										Utils.nvl(normalizeName(tracks[t].get("title")), "NA")));
+								if (tracks[t].get("performer") != null)
+									cuew.write(String.format("    PERFORMER \"%s\"%n",
+											normalizeName(tracks[t].get("performer"))));
+								if (dsf.textDuration > 0) {
+									int start = (int) Math.round(dsf.getTimeAdjustment() * tracks[t].start);
+									cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", start / 60, start % 60, 0));
+								} else
+									cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", tracks[t].start / 60,
+											tracks[t].start % 60, tracks[t].startFrame));
+							}
+						} else {
+							cuew.write(String.format("  TRACK 01 AUDIO%n"));
 							cuew.write(String.format("    TITLE \"%s\"%n",
-									Utils.nvl(normalizeName(tracks[t].get("title")), "NA")));
-							if (tracks[t].get("performer") != null)
-								cuew.write(String.format("    PERFORMER \"%s\"%n",
-										normalizeName(tracks[t].get("performer"))));
-							if (dsf.textDuration > 0) {
-								int start = (int) Math.round(dsf.getTimeAdjustment() * tracks[t].start);
-								cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", start / 60, start % 60, 0));
-							} else
-								cuew.write(String.format("    INDEX 01 %02d:%02d:%02d%n", tracks[t].start / 60,
-										tracks[t].start % 60, tracks[t].startFrame));
+									Utils.nvl(normalizeName(tracks[track].get("title")))));
+							cuew.write(String.format("    PERFORMER \"%s\"%n",
+									Utils.nvl(normalizeName(tracks[track].get("performer")))));
+							cuew.write(String.format("    INDEX 01 00:00:00%n"));
 						}
-					} else {
-						cuew.write(String.format("  TRACK 01 AUDIO%n"));
-						cuew.write(String.format("    TITLE \"%s\"%n",
-								Utils.nvl(normalizeName(tracks[track].get("title")))));
-						cuew.write(String.format("    PERFORMER \"%s\"%n",
-								Utils.nvl(normalizeName(tracks[track].get("performer")))));
-						cuew.write(String.format("    INDEX 01 00:00:00%n"));
+						cuew.flush();
 					}
-					cuew.flush();
 				}
-			}
-			if (df.exists() && !ove)
-				throw new ExtractionProblem("File " + df + " already exists");
-			dff = new RandomAccessFile(df, "rw");
-			long hdrSize = writeDFFHeader(dff, dsf);
-			long len = 0;
-			dsf.initBuffers(0);
-			byte samples[] = dsf.getSamples();
-			dsf.seek(seek); // TODO track
-			if (progress != null) {
-				if (trackLen > 0)
-					progress.init(trackLen, df, cuef);
-				else
-					progress.init(dsf.getSampleCount() * dsf.getNumChannels() / 8, df, cuef);
-			}
-			while (dsf.readDataBlock()) {
-				dff.write(samples, 0, dsf.bufEnd);
-				dsf.bufPos = dsf.bufEnd;
-				len += dsf.bufEnd;
-				if (progress != null)
-					progress.progress(len);
-				if (trackLen > 0 && len >= trackLen)
-					break;
-			}
-			dff.writeByte(0);
-			dff.seek(4);
-			dff.writeLong(len + hdrSize - 12);
-			dff.seek(hdrSize - 8);
-			dff.writeLong(len);
+				
+				ct++;
+				trns--;
+			} while (trns > 0);
 		} catch (Exception e) {
-			//e.printStackTrace();
-			throw new ExtractionProblem(""+e);
+			throw (ExtractionProblem)new ExtractionProblem(""+e).initCause(e);
 		} finally {
-			try {
-				dff.close();
-			} catch (Exception e) {
-			}
-			if (cuew != null)
-				try {
-					cuew.close();
-				} catch (IOException e) {
-				}
 			dsf.close();
 		}
 	}
