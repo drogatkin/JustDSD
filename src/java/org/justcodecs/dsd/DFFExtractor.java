@@ -115,7 +115,7 @@ public class DFFExtractor {
 
 	private static void displayHelp() {
 		System.out
-				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] [-3] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1)%n        p - play specified file instead of extraction%n        3 - preserve ID3 tags%n");
+				.printf("Usage: [-d <target_directory>] [-n] [-t <nn>] [-f] [-p] [-3] <ISO path>%n where: n - no cue,%n        f - overwrite existing files%n        t - extract specified track only (start from 1, -1 for all)%n        p - play specified file instead of extraction%n        3 - preserve ID3 tags%n");
 	}
 
 	public static class ExtractionProblem extends Exception {
@@ -278,7 +278,7 @@ public class DFFExtractor {
 						cuew.write(String.format("REM GENRE \"%s\"%n", Utils.nvl(dsf.getMetadata("Genre"), "NA")));
 						cuew.write(String.format("REM DATE %s%n", dsf.getMetadata("Year").toString()));
 						cuew.write(String.format("REM DISCID %s%n", quoteIt(dsf.toc.discCatalogNumber)));
-						cuew.write(String.format("REM TOTAL %02d:%02d%n", dsf.atoc.minutes, dsf.atoc.seconds));
+						cuew.write(String.format("REM TOTAL %02d:%02d%n", dsf.atoc.minutes, dsf.atoc.seconds)); // recalculate based on a single track length
 						cuew.write("REM COMMENT \"JustDSD https://github.com/drogatkin/JustDSD\"\r\n");
 						cuew.write(String.format("PERFORMER \"%s\"%n",
 								Utils.nvl(normalizeName((String) dsf.getMetadata("Artist")), "NA")));
@@ -305,9 +305,9 @@ public class DFFExtractor {
 						} else {
 							cuew.write(String.format("  TRACK 01 AUDIO%n"));
 							cuew.write(String.format("    TITLE \"%s\"%n",
-									Utils.nvl(normalizeName(tracks[track].get("title")))));
+									Utils.nvl(normalizeName(tracks[ct].get("title")))));
 							cuew.write(String.format("    PERFORMER \"%s\"%n",
-									Utils.nvl(normalizeName(tracks[track].get("performer")))));
+									Utils.nvl(normalizeName(tracks[ct].get("performer")))));
 							cuew.write(String.format("    INDEX 01 00:00:00%n"));
 						}
 						cuew.flush();
