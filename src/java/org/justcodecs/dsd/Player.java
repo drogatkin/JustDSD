@@ -18,7 +18,7 @@ public class Player {
 	static final String ERR_CANTPLAY= "Couldn't play %s, because %s%n";
 	
 	public static void main(String[] args) {
-		System.out.printf("Java DSD player for PCM DAC  \u00a9 2015-2024 D. Rogatkin%n");
+		System.out.printf("Java DSD player for PCM DAC  \u00a9 2015-%04d D. Rogatkin%n", java.time.Year.now().getValue());
 		if (args.length == 0) {
 			System.out.printf("Please use with at least one .dsf, .dff, or [SACD].iso file argument%n");
 			System.exit(-1);

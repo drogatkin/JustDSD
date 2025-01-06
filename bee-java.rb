@@ -1,10 +1,9 @@
 # a script example to build Java project 
 
 project =jdsd
-"build_directory" = ${~cwd~}/lib
-source_directory ="${~cwd~}/src/java"
-#source_directory_extra ="diffutils/src"
-doc_directory=${~cwd~}/doc
+"build_directory" = ${~cwd~}${~/~}lib
+source_directory ="${~cwd~}${~/~}src${~/~}java"
+doc_directory=${~cwd~}${~/~}doc
 build_file ="${project}.jar"
  domain ="org"
 resources ="${domain}.${project}.resources"
@@ -12,14 +11,15 @@ manifest ="manifest.mf"
 main_class= "${domain}.justcodecs.dsd.Player"
 version=8
 
-CUSTOM CP=${~cwd~}/../tiny-codec/tools/ID3V2/bin/id3v2.jar
+include(../rusthub/src/script/common-java.7b)
+
+CUSTOM CP=${~cwd~}${~/~}..${~/~}tiny-codec${~/~}tools${~/~}ID3V2${~/~}bin${~/~}id3v2.jar
 
 target clean {
     dependency {true}
-    exec rm  (
-        -r,
-        ${build_directory}/${domain},
-        ${build_directory}/${build_file}
+    rm  (
+        ${build_directory}${~/~}${domain},
+        ${build_directory}${~/~}${build_file}
     )
 }
 
@@ -55,7 +55,7 @@ target compile:. {
 
 target jar {
       dependency {
-         anynewer(${build_directory}/${domain}/*,${build_directory}/${build_file})
+         anynewer(${build_directory}${~/~}${domain}${~/~}*,${build_directory}${~/~}${build_file})
       }
       dependency {
           target(compile)
@@ -63,8 +63,8 @@ target jar {
      
      {    display(Jarring ${build_file} ...)
           exec jar (
-            -cmf, ${~cwd~}/${manifest},
-            ${build_directory}/${build_file},
+            -cmf, ${~cwd~}${~/~}${manifest},
+            ${build_directory}${~/~}${build_file},
             -C,
             ${build_directory},
             ${domain}
@@ -91,14 +91,14 @@ target run :.: {
             then {
                 exec java (
                     -cp,
-                     ${build_directory}/${build_file}${~path_separator~}${CUSTOM CP},
+                     ${build_directory}${~/~}${build_file}${~path_separator~}${CUSTOM CP},
                     ${main_class},
                     ~args~
                    )
             } else {
                   exec java (
                     -jar,
-                     ${build_directory}/${build_file},
+                     ${build_directory}${~/~}${build_file},
                     ~args~
                    )
             }
