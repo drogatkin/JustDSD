@@ -20,7 +20,7 @@ public class DFFExtractor {
 	}
 
 	public static void main(String... args) {
-		System.out.printf("Java SACD ISO -> DFF extractor/player  \u00a9 2015-%04d D. Rogatkin%n", java.time.Year.now().getValue());
+		System.out.printf("Java SACD ISO -> DFF extractor/player  © 2015-%04d D. Rogatkin%n", java.time.Year.now().getValue());
 		if (args.length == 0) {
 			displayHelp();
 			System.exit(1);
@@ -238,7 +238,7 @@ public class DFFExtractor {
 					trackLen = (long) (tr.duration + 1) * dsf.getNumChannels() * dsf.getSampleRate() / 8;
 					album = Utils.nvl((String) tr.get("title"), String.format("Track %03d", ct + 1));
 				}
-				File df = new File(target, String.format("%02d-%s.dff", ct, normalize(album)));
+				File df = new File(target, String.format("%02d-%s.dff", ct+1, normalize(album)));
 				if (df.exists() && !ove)
 					throw new ExtractionProblem("File " + df + " already exists");
 				try (RandomAccessFile dff = new RandomAccessFile(df, "rw");) {
