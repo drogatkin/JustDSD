@@ -196,7 +196,7 @@
            </function>
     </dependency>
 
-    <task name="jar_do" code="sun.tools.jar.Main">
+    <task name="jar_do" code="sun.tools.jar.Main" tool="jar">
        <parameter>
           <expression>
             <if>

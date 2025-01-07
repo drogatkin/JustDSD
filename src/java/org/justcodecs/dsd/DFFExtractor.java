@@ -11,6 +11,12 @@ import java.nio.file.Files;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+
 public class DFFExtractor {
 
 	public static interface Progress {
@@ -20,6 +26,9 @@ public class DFFExtractor {
 	}
 
 	public static void main(String... args) {
+	    FileOutputStream fos2 = new FileOutputStream(FileDescriptor.out);
+        PrintStream ps2 = new PrintStream(fos2, true, StandardCharsets.UTF_8);
+        System.setOut(ps2);
 		System.out.printf("Java SACD ISO -> DFF extractor/player  © 2015-%04d D. Rogatkin%n", java.time.Year.now().getValue());
 		if (args.length == 0) {
 			displayHelp();
