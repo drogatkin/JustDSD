@@ -441,8 +441,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			//t.printStackTrace();
 			if (processor != null)
 				processor.interrupt();
-			if (t instanceof ThreadDeath)
-				throw (ThreadDeath) t;
 			runException = t;
 		}
 		if (runException != null) {
@@ -516,8 +514,6 @@ public class DISOFormat extends DSDFormat<byte[]> implements Scarletbook, Runnab
 			} catch (Throwable t) {
 				//t.printStackTrace();
 				runException = t;
-				if (t instanceof ThreadDeath)
-					throw (ThreadDeath) t;
 				break;
 			}
 		}

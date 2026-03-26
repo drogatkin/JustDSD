@@ -1602,7 +1602,8 @@ public class DSTDecoder {
 			ACError = AC.LT_ACDecodeBit_Flush(AData, ADataLen);
 //System.out.printf("%nbuf %s%n", Utils.toHexString(0, 64, MuxedDSDdata));
 			if (ACError != 1 /*|| true*/) {
-				throw new DSTException("Arithmetic decoding error!", -1);
+				//throw new DSTException("Arithmetic decoding error!", ACError);
+				System.err.printf("Arithmetic decoding error! - %d%n", ACError);
 			}
 		}
 	}
